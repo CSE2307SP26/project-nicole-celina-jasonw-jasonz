@@ -59,10 +59,10 @@ public class MainMenu {
             System.out.print("Enter fee amount to collect: ");
             feeAmount = keyboardInput.nextDouble();
         }
-        try {
-            userAccount.collectFee(feeAmount);
-        } catch (IllegalStateException e) {
+        if(userAccount.getBalance() < feeAmount) {
             System.out.println("Warning: Insufficient balance. Cannot collect fee of $" + feeAmount + ". Current balance: $" + userAccount.getBalance());
+        } else {
+            userAccount.collectFee(feeAmount);
         }
     }
 
