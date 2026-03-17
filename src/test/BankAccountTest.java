@@ -45,4 +45,16 @@ public class BankAccountTest {
             //do nothing, test passes
         }
     }
+
+    @Test
+    public void testCollectFeeInsufficientBalance() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.deposit(50);
+        try {
+            testAccount.collectFee(75);
+            fail();
+        } catch (IllegalStateException e) {
+            assertEquals(50, testAccount.getBalance(), 0.01);
+        }
+    }
 }

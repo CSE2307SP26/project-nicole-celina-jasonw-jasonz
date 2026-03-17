@@ -21,10 +21,12 @@ public class BankAccount {
     }
 
     public void collectFee(double amount) {
-        if(amount > 0) {
-            this.balance -= amount;
-        } else {
+        if(amount <= 0) {
             throw new IllegalArgumentException();
         }
+        if(this.balance < amount) {
+            throw new IllegalStateException("Insufficient balance");
+        }
+        this.balance -= amount;
     }
 }
