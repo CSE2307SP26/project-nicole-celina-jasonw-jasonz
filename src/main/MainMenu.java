@@ -5,7 +5,7 @@ import java.util.Scanner;
 public class MainMenu {
 
     private static final int EXIT_SELECTION = 2;
-	private static final int MAX_SELECTION = 2;
+	private static final int MAX_SELECTION = 3;
 
 	private BankAccount userAccount;
     private Scanner keyboardInput;
@@ -20,6 +20,7 @@ public class MainMenu {
         
         System.out.println("1. Make a deposit");
         System.out.println("2. Exit the app");
+        System.out.println("3. Admin - Collect fees");
 
     }
 
@@ -36,6 +37,10 @@ public class MainMenu {
         switch (selection) {
             case 1:
                 performDeposit();
+                break;
+            case 3:
+                performCollectFee();
+                break;
         }
     }
 
@@ -46,6 +51,15 @@ public class MainMenu {
             depositAmount = keyboardInput.nextInt();
         }
         userAccount.deposit(depositAmount);
+    }
+
+    public void performCollectFee() {
+        double feeAmount = -1;
+        while(feeAmount < 0) {
+            System.out.print("Enter fee amount to collect: ");
+            feeAmount = keyboardInput.nextDouble();
+        }
+        userAccount.collectFee(feeAmount);
     }
 
     public void run() {
