@@ -25,6 +25,11 @@ public class BankAccount {
         this.balance -= amount;
     }
 
+    public void balanceCheck() {
+        double balance = this.getBalance();
+        System.out.println("Your current balance is: " + balance);
+    }
+
     public double getBalance() {
         return this.balance;
     }
