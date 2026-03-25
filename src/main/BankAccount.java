@@ -19,4 +19,14 @@ public class BankAccount {
     public double getBalance() {
         return this.balance;
     }
+
+    public void collectFee(double amount) {
+        if(amount <= 0) {
+            throw new IllegalArgumentException();
+        }
+        if(this.balance < amount) {
+            throw new IllegalStateException("Insufficient balance");
+        }
+        this.balance -= amount;
+    }
 }
