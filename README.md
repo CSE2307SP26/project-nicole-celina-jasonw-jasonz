@@ -1,6 +1,4 @@
-# project26
-
-# Bank System Information Architecture
+# project26 Bank System Information Architecture
 
 ## Top-Level Sitemap
 
