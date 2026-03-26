@@ -2,20 +2,20 @@ package main;
 
 public class BankAccount {
 
-    private final String name;
+    private final String accountName;
     private double balance;
 
     public BankAccount() {
-        this("Default Checking");
+        this("Default Account");
     }
 
-    public BankAccount(String name) {
-        this.name = name;
+    public BankAccount(String accountName) {
+        this.accountName = accountName;
         this.balance = 0;
     }
 
-    public String getName() {
-        return name;
+    public String getAccountName() {
+        return accountName;
     }
 
     public void deposit(double amount) {
@@ -34,8 +34,6 @@ public class BankAccount {
         }
         this.balance -= amount;
     }
-
-    
 
     public double getBalance() {
         return this.balance;

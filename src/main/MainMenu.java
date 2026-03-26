@@ -59,7 +59,7 @@ public class MainMenu {
         System.out.println();
         System.out.println("--- Customer ---");
         System.out.println("1. Select account");
-        System.out.println("2. Open account");
+        System.out.println("2. Create account");
         System.out.println("3. Return to role selection");
     }
 
@@ -95,7 +95,7 @@ public class MainMenu {
         System.out.println("Accounts:");
         for (int i = 0; i < list.size(); i++) {
             BankAccount a = list.get(i);
-            System.out.println("  " + (i + 1) + ". " + a.getName()
+            System.out.println("  " + (i + 1) + ". " + a.getAccountName()
                     + " — balance: " + a.getBalance());
         }
     }
@@ -140,21 +140,21 @@ public class MainMenu {
         return n;
     }
 
-    void runOpenAccount() {
+    void performCreateAccount() {
         keyboardInput.nextLine();
-        System.out.print("Name for the new account: ");
-        String name = keyboardInput.nextLine().trim();
-        if (name.isEmpty()) {
+        System.out.print("Enter name for the new account: ");
+        String newAccountName = keyboardInput.nextLine().trim();
+        if (newAccountName.isEmpty()) {
             System.out.println("Account name cannot be empty.");
             return;
         }
-        accounts.add(new BankAccount(name));
-        System.out.println("Account opened: " + name);
+        accounts.add(new BankAccount(newAccountName));
+        System.out.println("Your new account has been created: " + newAccountName);
     }
 
     void displayAccountDetailMenu(BankAccount account) {
         System.out.println();
-        System.out.println("--- Account detail: " + account.getName() + " ---");
+        System.out.println("--- Account detail: " + account.getAccountName() + " ---");
         System.out.println("1. Deposit");
         System.out.println("2. Withdraw");
         System.out.println("3. Check balance");
@@ -199,7 +199,7 @@ public class MainMenu {
 
     public void performCloseAccount(BankAccount account, boolean isTesting) {
         accounts.remove(account);
-        System.out.println("Account [" + account.getName() + "] is closed. Taking you back to the main menu.");
+        System.out.println("Account [" + account.getAccountName() + "] is closed. Taking you back to the main menu.");
         if (!isTesting) {
             runCustomerFlow();
         }
@@ -208,7 +208,7 @@ public class MainMenu {
     public void performTransferWithdraw(BankAccount account) {
         System.out.println("--- Transfer money between accounts ---");
         printAccountListNumbered(accounts);
-        double transferAmount = promptNonNegativeAmount("Amount to transfer from [" + account.getName() + "]: ");
+        double transferAmount = promptNonNegativeAmount("Amount to transfer from [" + account.getAccountName() + "]: ");
         if (transferAmount == 0) {
             System.out.println("No transfer made.");
             return;
@@ -224,7 +224,7 @@ public class MainMenu {
     }
 
     public void performTransferDeposit(BankAccount account, double transferAmount) {
-        int targetAccountIndex = promptAccountIndex("Which account would you like to transfer this amount into?");
+        int targetAccountIndex = promptAccountIndex("Select the account to transfer this amount into: ");
         BankAccount targetAccount = accounts.get(targetAccountIndex - 1);
         if (targetAccount == account) {
             System.out.println("You cannot transfer money to the same account.");
@@ -233,8 +233,8 @@ public class MainMenu {
         }
         targetAccount.deposit(transferAmount);
         System.out.println("--- Here's your updated account balance: ---");
-        System.out.println(account.getName() + ": " + account.getBalance());
-        System.out.println(targetAccount.getName() + ": " + targetAccount.getBalance());
+        System.out.println(account.getAccountName() + ": " + account.getBalance());
+        System.out.println(targetAccount.getAccountName() + ": " + targetAccount.getBalance());
     }
 
 
@@ -293,7 +293,7 @@ public class MainMenu {
 
     void displayAdminActionsForAccount(BankAccount account) {
         System.out.println();
-        System.out.println("Managing: " + account.getName() + " | Balance: " + account.getBalance());
+        System.out.println("Managing: " + account.getAccountName() + " | Balance: " + account.getBalance());
         System.out.println("1. Collect fee");
         System.out.println("2. Apply interest payment (rate % × principal × period)");
         System.out.println("3. Back to account list");
@@ -389,7 +389,7 @@ public class MainMenu {
                     runSelectAccountFlow();
                     break;
                 case CUSTOMER_OPEN_ACCOUNT:
-                    runOpenAccount();
+                    performCreateAccount();
                     break;
                 default:
                     break;

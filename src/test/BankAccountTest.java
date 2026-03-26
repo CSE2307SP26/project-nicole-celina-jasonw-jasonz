@@ -27,7 +27,6 @@ public class BankAccountTest {
             //do nothing, test passes
         }
     }
-
     // customer test: withdrawal
     @Test
     public void testWithdrawal() {
@@ -164,6 +163,19 @@ public class BankAccountTest {
 
         assertEquals(100, source.getBalance(), 0.001);
         assertEquals(50, other.getBalance(), 0.001);
+    }
+
+    //customer test: open account
+    @Test
+    public void testCreateAccountStoresInputName() {
+        BankAccount testAccount = new BankAccount("Savings");
+        assertEquals("Savings", testAccount.getAccountName());
+    }
+
+    @Test
+    public void testCreateAccountHasZeroBalance() {
+        BankAccount testAccount = new BankAccount("Savings");
+        assertEquals(0, testAccount.getBalance(), 0.005);
     }
 
 
