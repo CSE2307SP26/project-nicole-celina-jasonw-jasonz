@@ -1,12 +1,14 @@
 package test;
 
 import main.BankAccount;
+import main.MainMenu;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import org.junit.jupiter.api.Test;
 
 public class BankAccountTest {
 
+    // customer test: deposit
     @Test
     public void testDeposit() {
         BankAccount testAccount = new BankAccount();
@@ -25,6 +27,8 @@ public class BankAccountTest {
             //do nothing, test passes
         }
     }
+
+    // customer test: withdrawal
     @Test
     public void testWithdrawal() {
         BankAccount testAccount = new BankAccount();
@@ -65,6 +69,19 @@ public class BankAccountTest {
         }
     }
 
+
+    // customer test: close account
+
+    @Test
+    public void testValidAccountClosing() {
+        MainMenu menu = new MainMenu();
+        BankAccount testAccount = new BankAccount("Test");
+        menu.getAccounts().add(testAccount);
+        menu.performCloseAccount(testAccount);
+        assertEquals(false, menu.getAccounts().contains(testAccount));
+    }
+
+    // admin tests
     @Test
     public void testCollectFee() {
         BankAccount testAccount = new BankAccount();

@@ -83,6 +83,11 @@ public class MainMenu {
         return selection;
     }
 
+    
+    public List<BankAccount> getAccounts() {
+        return accounts;
+    }
+
     /**
      * Prints all accounts with 1-based indices (reusable for admin UI).
      */
