@@ -77,9 +77,95 @@ public class BankAccountTest {
         MainMenu menu = new MainMenu();
         BankAccount testAccount = new BankAccount("Test");
         menu.getAccounts().add(testAccount);
-        menu.performCloseAccount(testAccount);
+        menu.performCloseAccount(testAccount, true);
         assertEquals(false, menu.getAccounts().contains(testAccount));
     }
+
+    // customer test: transfer money
+    // Fake subclass so tests can control user input
+    static class TestMainMenu extends MainMenu {
+        double testAmount;
+        int testTargetIndex;
+
+        @Override
+        public double promptNonNegativeAmount(String message) {
+            return testAmount;
+        }
+
+        @Override
+        public int promptAccountIndex(String message) {
+            return testTargetIndex;
+        }
+    }
+
+    @Test
+    public void testTransferAmountZeroMakesNoChange() {
+        TestMainMenu menu = new TestMainMenu();
+
+        BankAccount source = new BankAccount("Source");
+        BankAccount target = new BankAccount("Target");
+
+        source.deposit(100);
+        target.deposit(50);
+
+        menu.getAccounts().clear();
+        menu.getAccounts().add(source);
+        menu.getAccounts().add(target);
+
+        menu.testAmount = 0;
+
+        menu.performTransferWithdraw(source);
+
+        assertEquals(100, source.getBalance(), 0.001);
+        assertEquals(50, target.getBalance(), 0.001);
+    }
+
+    @Test
+    public void testValidTransferMovesMoney() {
+        TestMainMenu menu = new TestMainMenu();
+
+        BankAccount source = new BankAccount("Source");
+        BankAccount target = new BankAccount("Target");
+
+        source.deposit(100);
+        target.deposit(50);
+
+        menu.getAccounts().clear();
+        menu.getAccounts().add(source);
+        menu.getAccounts().add(target);
+
+        menu.testAmount = 30;
+        menu.testTargetIndex = 2;
+
+        menu.performTransferWithdraw(source);
+
+        assertEquals(70, source.getBalance(), 0.001);
+        assertEquals(80, target.getBalance(), 0.001);
+    }
+
+    @Test
+    public void testTransferToSameAccountIsUndone() {
+        TestMainMenu menu = new TestMainMenu();
+
+        BankAccount source = new BankAccount("Source");
+        BankAccount other = new BankAccount("Other");
+
+        source.deposit(100);
+        other.deposit(50);
+
+        menu.getAccounts().clear();
+        menu.getAccounts().add(source);
+        menu.getAccounts().add(other);
+
+        menu.testAmount = 25;
+        menu.testTargetIndex = 1; // selects source itself
+
+        menu.performTransferWithdraw(source);
+
+        assertEquals(100, source.getBalance(), 0.001);
+        assertEquals(50, other.getBalance(), 0.001);
+    }
+
 
     // admin tests
     @Test

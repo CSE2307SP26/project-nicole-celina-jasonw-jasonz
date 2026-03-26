@@ -103,7 +103,7 @@ public class MainMenu {
     /**
      * Prompts for a non-negative amount (0 allowed where caller treats it as invalid loop).
      */
-    double promptNonNegativeAmount(String prompt) {
+    public double promptNonNegativeAmount(String prompt) {
         double amount = -1;
         while (amount < 0) {
             System.out.print(prompt);
@@ -126,6 +126,20 @@ public class MainMenu {
         }
         return n;
     }
+
+    // prompts for viable account index
+    public int promptAccountIndex(String prompt) {
+        int n = 0;
+        while (n - 1 < 0 || n - 1 >= accounts.size() ) {
+            System.out.print(prompt);
+            n = keyboardInput.nextInt();
+            if(n - 1 < 0 || n - 1 >= accounts.size()){
+                System.out.println("Invalid account index. Please try again.");
+            }
+        }
+        return n;
+    }
+
     void runOpenAccount() {
         keyboardInput.nextLine();
         System.out.print("Name for the new account: ");
@@ -183,11 +197,46 @@ public class MainMenu {
         System.out.println("Current balance: " + account.getBalance());
     }
 
-    public void performCloseAccount(BankAccount account) {
+    public void performCloseAccount(BankAccount account, boolean isTesting) {
         accounts.remove(account);
         System.out.println("Account [" + account.getName() + "] is closed. Taking you back to the main menu.");
-        runCustomerFlow();
+        if (!isTesting) {
+            runCustomerFlow();
+        }
     }
+
+    public void performTransferWithdraw(BankAccount account) {
+        System.out.println("--- Transfer money between accounts ---");
+        printAccountListNumbered(accounts);
+        double transferAmount = promptNonNegativeAmount("Amount to transfer from [" + account.getName() + "]: ");
+        if (transferAmount == 0) {
+            System.out.println("No transfer made.");
+            return;
+        }
+        try {
+            account.withdraw(transferAmount);
+            performTransferDeposit(account, transferAmount);
+        } catch (IllegalArgumentException e) {
+            System.out.println("Invalid amount.");
+        } catch (IllegalStateException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    public void performTransferDeposit(BankAccount account, double transferAmount) {
+        int targetAccountIndex = promptAccountIndex("Which account would you like to transfer this amount into?");
+        BankAccount targetAccount = accounts.get(targetAccountIndex - 1);
+        if (targetAccount == account) {
+            System.out.println("You cannot transfer money to the same account.");
+            account.deposit(transferAmount); // undo the withdrawal
+            return;
+        }
+        targetAccount.deposit(transferAmount);
+        System.out.println("--- Here's your updated account balance: ---");
+        System.out.println(account.getName() + ": " + account.getBalance());
+        System.out.println(targetAccount.getName() + ": " + targetAccount.getBalance());
+    }
+
 
     void runAccountDetailLoop(BankAccount account) {
         int action = -1;
@@ -205,10 +254,10 @@ public class MainMenu {
                     performCheckBalance(account);
                     break;
                 case ACCT_DETAIL_TRANSFER:
-                    System.out.println("(Transfer money — not implemented yet.)");
+                    performTransferWithdraw(account);
                     break;
                 case ACCT_DETAIL_CLOSE_ACCOUNT:
-                    performCloseAccount(account);
+                    performCloseAccount(account, false);
                     break;
                 default:
                     break;
