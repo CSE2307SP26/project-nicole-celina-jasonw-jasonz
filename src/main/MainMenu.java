@@ -20,9 +20,10 @@ public class MainMenu {
     private static final int ACCT_DETAIL_WITHDRAW = 2;
     private static final int ACCT_DETAIL_CHECK_BALANCE = 3;
     private static final int ACCT_DETAIL_TRANSFER = 4;
-    private static final int ACCT_DETAIL_CLOSE_ACCOUNT = 5;
-    private static final int ACCT_DETAIL_BACK = 6;
-    private static final int MAX_ACCOUNT_DETAIL_SELECTION = 6;
+    private static final int ACCT_DETAIL_TRANSACTION_HISTORY = 5;
+    private static final int ACCT_DETAIL_CLOSE_ACCOUNT = 6;
+    private static final int ACCT_DETAIL_BACK = 7;
+    private static final int MAX_ACCOUNT_DETAIL_SELECTION = 7;
 
     private static final int ADMIN_CHOOSE_ACCOUNT = 1;
     private static final int ADMIN_BACK_TO_ROLE = 2;
@@ -159,8 +160,9 @@ public class MainMenu {
         System.out.println("2. Withdraw");
         System.out.println("3. Check balance");
         System.out.println("4. Transfer money");
-        System.out.println("5. Close this account");
-        System.out.println("6. Back to customer menu");
+        System.out.println("5. View transaction history");
+        System.out.println("6. Close this account");
+        System.out.println("7. Back to customer menu");
     }
 
     public void performDeposit(BankAccount account) {
@@ -171,6 +173,7 @@ public class MainMenu {
         }
         try {
             account.deposit(depositAmount);
+            account.recordTransaction("Deposit", depositAmount);
             System.out.println("Deposit successful. ");
         } catch (IllegalArgumentException e) {
             System.out.println("Invalid amount.");
@@ -186,6 +189,7 @@ public class MainMenu {
         }
         try {
             account.withdraw(withdrawalAmount);
+            account.recordTransaction("Withdraw", -withdrawalAmount);
             System.out.println("Withdrawal successful.");
         } catch (IllegalArgumentException e) {
             System.out.println("Invalid amount.");
@@ -215,6 +219,7 @@ public class MainMenu {
         }
         try {
             account.withdraw(transferAmount);
+            account.recordTransaction("Transfer Out", -transferAmount);
             performTransferDeposit(account, transferAmount);
         } catch (IllegalArgumentException e) {
             System.out.println("Invalid amount.");
@@ -232,9 +237,23 @@ public class MainMenu {
             return;
         }
         targetAccount.deposit(transferAmount);
+        targetAccount.recordTransaction("Transfer In", transferAmount);
         System.out.println("--- Here's your updated account balance: ---");
         System.out.println(account.getAccountName() + ": " + account.getBalance());
         System.out.println(targetAccount.getAccountName() + ": " + targetAccount.getBalance());
+    }
+
+    public void performViewTransactionHistory(BankAccount account) {
+        if(account.getTransactionHistory().isEmpty()) {
+            System.out.println("No transactions yet.");
+            return;
+        }
+        else {
+            System.out.println("Transaction History for: " + account.getAccountName());
+            for(String transaction : account.getTransactionHistory()) {
+                System.out.println(transaction);
+            }
+        }
     }
 
 
@@ -255,6 +274,9 @@ public class MainMenu {
                     break;
                 case ACCT_DETAIL_TRANSFER:
                     performTransferWithdraw(account);
+                    break;
+                case ACCT_DETAIL_TRANSACTION_HISTORY:
+                    performViewTransactionHistory(account);
                     break;
                 case ACCT_DETAIL_CLOSE_ACCOUNT:
                     performCloseAccount(account, false);
