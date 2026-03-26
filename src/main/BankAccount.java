@@ -1,0 +1,88 @@
+package main;
+
+import java.util.List;
+import java.util.ArrayList;
+
+public class BankAccount {
+
+    private final String accountName;
+    private double balance;
+    private List<String> transactionHistory;
+
+    public BankAccount() {
+        this("Default Account");
+    }
+
+    public BankAccount(String accountName) {
+        this.accountName = accountName;
+        this.balance = 0;
+        this.transactionHistory = new ArrayList<>();
+    }
+
+    public String getAccountName() {
+        return accountName;
+    }
+
+    public void deposit(double amount) {
+        if (amount > 0) {
+            this.balance += amount;
+        } else {
+            throw new IllegalArgumentException();
+        }
+    }
+    public void withdraw(double amount) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException();
+        }
+        if (this.balance < amount) {
+            throw new IllegalArgumentException("Insufficient balance");
+        }
+        this.balance -= amount;
+    }
+
+    public double getBalance() {
+        return this.balance;
+    }
+
+    public void recordTransaction(String transactionType, double amount) {
+        transactionHistory.add(transactionType + ": " + amount);
+    }
+
+    public List<String> getTransactionHistory() {
+        return transactionHistory;
+    }
+
+    public void collectFee(double amount) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException();
+        }
+        if (this.balance < amount) {
+            throw new IllegalStateException("Insufficient balance");
+        }
+        this.balance -= amount;
+    }
+
+    /**
+     * Credits simple interest on the current principal (balance) for a period.
+     * Interest = principal × (annualRatePercent / 100) × (monthsInPeriod / 12).
+     *
+     * @param annualRatePercent nominal annual rate, e.g. 3.0 for 3% per year
+     * @param monthsInPeriod    length of the accrual period in months
+     * @return interest amount credited (0 if principal is not positive)
+     */
+    public double applyInterestPayment(double annualRatePercent, int monthsInPeriod) {
+        if (annualRatePercent < 0) {
+            throw new IllegalArgumentException();
+        }
+        if (monthsInPeriod <= 0) {
+            throw new IllegalArgumentException();
+        }
+        if (this.balance <= 0) {
+            return 0;
+        }
+        double principal = this.balance;
+        double interest = principal * (annualRatePercent / 100.0) * (monthsInPeriod / 12.0);
+        this.balance += interest;
+        return interest;
+    }
+}
