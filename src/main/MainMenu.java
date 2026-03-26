@@ -45,7 +45,7 @@ public class MainMenu {
     BankAccount getDefaultAccount() {
         return accounts.get(0);
     }
-    
+
     public void displayRoleSelection() {
         System.out.println();
         System.out.println("Welcome to the 237 Bank App!");
