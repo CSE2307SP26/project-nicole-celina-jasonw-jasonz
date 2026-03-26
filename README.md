@@ -24,9 +24,7 @@
 9. A bank adminstrator should be able to add an interest payment to an existing account when necessary. (Jason Zhao)
 
 ## What user stories were completed this iteration?
-This branch focuses only on Task 6 (“A bank customer should be able to close an existing account”). When the user opens the app, they see a list of existing accounts and are asked to enter the index of the account they want to close (each item appears like “[2] test account 2”). Since this feature is separate from the main interface, the app generates between 1 and 5 sample accounts.
 
-If the user enters an out-of-bounds number or something that is not a number (such as text), the app shows an error message and asks them to try again. If the input is valid, the selected account is removed, and the updated list is displayed.
 
 ## What user stories do you intend to complete next iteration?
 Next step is to integrate this feature to the main interface, so the users are presented with their "actual" accounts instead of fake sample ones. 
@@ -38,3 +36,6 @@ Everything is currently working. The unit tests look at whether the list of acco
 javac -d bin src/main/Account.java src/main/CloseAccount.java
 java -cp bin CloseAccount
 
+
+javac -d bin src/main/Account.java src/main/TransferMoney.java
+java -cp bin TransferMoney
