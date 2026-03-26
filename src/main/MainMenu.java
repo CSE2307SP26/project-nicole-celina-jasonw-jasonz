@@ -1,5 +1,7 @@
 package main;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 public class MainMenu {
@@ -13,16 +15,26 @@ public class MainMenu {
     private static final int CUSTOMER_EXIT_TO_ROLE = 2;
     private static final int MAX_CUSTOMER_SELECTION = 2;
 
-    private static final int ADMIN_SEARCH = 1;
+    private static final int ADMIN_CHOOSE_ACCOUNT = 1;
     private static final int ADMIN_BACK_TO_ROLE = 2;
-    private static final int MAX_ADMIN_SELECTION = 2;
+    private static final int MAX_ADMIN_TOP_SELECTION = 2;
 
-    private BankAccount userAccount;
-    private Scanner keyboardInput;
+    private static final int ADMIN_ACT_COLLECT_FEE = 1;
+    private static final int ADMIN_ACT_INTEREST = 2;
+    private static final int ADMIN_ACT_BACK_TO_LIST = 3;
+    private static final int MAX_ADMIN_ACTION_SELECTION = 3;
+
+    private final List<BankAccount> accounts;
+    private final Scanner keyboardInput;
 
     public MainMenu() {
-        this.userAccount = new BankAccount();
+        this.accounts = new ArrayList<>();
+        this.accounts.add(new BankAccount("Default Account"));
         this.keyboardInput = new Scanner(System.in);
+    }
+
+    BankAccount getDefaultAccount() {
+        return accounts.get(0);
     }
 
     public void displayRoleSelection() {
@@ -37,14 +49,16 @@ public class MainMenu {
     public void displayCustomerOptions() {
         System.out.println();
         System.out.println("--- Customer ---");
+        System.out.println("Account: " + getDefaultAccount().getName()
+                + " | Balance: " + getDefaultAccount().getBalance());
         System.out.println("1. Make a deposit");
         System.out.println("2. Return to role selection");
     }
 
-    public void displayAdministratorOptions() {
+    public void displayAdministratorTopMenu() {
         System.out.println();
         System.out.println("--- Administrator ---");
-        System.out.println("1. Search Customer / Account");
+        System.out.println("1. Select account to manage");
         System.out.println("2. Return to role selection");
     }
 
@@ -57,6 +71,42 @@ public class MainMenu {
         return selection;
     }
 
+    /**
+     * Prints all accounts with 1-based indices (reusable for admin UI).
+     */
+    void printAccountListNumbered(List<BankAccount> list) {
+        System.out.println("Accounts:");
+        for (int i = 0; i < list.size(); i++) {
+            BankAccount a = list.get(i);
+            System.out.println("  " + (i + 1) + ". " + a.getName()
+                    + " — balance: " + a.getBalance());
+        }
+    }
+
+    /**
+     * Prompts for a non-negative amount (0 allowed where caller treats it as invalid loop).
+     */
+    double promptNonNegativeAmount(String prompt) {
+        double amount = -1;
+        while (amount < 0) {
+            System.out.print(prompt);
+            amount = keyboardInput.nextDouble();
+        }
+        return amount;
+    }
+
+    /**
+     * Prompts for a positive integer (e.g. months in an interest period).
+     */
+    int promptPositiveInt(String prompt) {
+        int n = 0;
+        while (n <= 0) {
+            System.out.print(prompt);
+            n = keyboardInput.nextInt();
+        }
+        return n;
+    }
+
     public void processCustomerInput(int selection) {
         switch (selection) {
             case CUSTOMER_DEPOSIT:
@@ -67,23 +117,116 @@ public class MainMenu {
         }
     }
 
-    public void processAdministratorInput(int selection) {
-        switch (selection) {
-            case ADMIN_SEARCH:
-                System.out.println("Search Customer / Account is not yet implemented.");
-                break;
-            default:
-                break;
+    public void performDeposit() {
+        double depositAmount = promptNonNegativeAmount("How much would you like to deposit: ");
+        if (depositAmount == 0) {
+            System.out.println("No deposit made.");
+            return;
+        }
+        getDefaultAccount().deposit(depositAmount);
+        System.out.println("Deposit successful. New balance: " + getDefaultAccount().getBalance());
+    }
+
+    /**
+     * Returns chosen account, or null if user chose back.
+     */
+    BankAccount promptSelectAccountOrBack() {
+        printAccountListNumbered(accounts);
+        int backIndex = accounts.size() + 1;
+        System.out.println("  " + backIndex + ". Back");
+        int choice = getUserSelection(backIndex);
+        if (choice == backIndex) {
+            return null;
+        }
+        return accounts.get(choice - 1);
+    }
+
+    void displayAdminActionsForAccount(BankAccount account) {
+        System.out.println();
+        System.out.println("Managing: " + account.getName() + " | Balance: " + account.getBalance());
+        System.out.println("1. Collect fee");
+        System.out.println("2. Apply interest payment (rate % × principal × period)");
+        System.out.println("3. Back to account list");
+    }
+
+    void performCollectFee(BankAccount account) {
+        double fee = promptNonNegativeAmount("Fee amount to collect: ");
+        if (fee == 0) {
+            System.out.println("No fee collected.");
+            return;
+        }
+        try {
+            account.collectFee(fee);
+            System.out.println("Fee collected. New balance: " + account.getBalance());
+        } catch (IllegalArgumentException e) {
+            System.out.println("Invalid amount.");
+        } catch (IllegalStateException e) {
+            System.out.println(e.getMessage());
         }
     }
 
-    public void performDeposit() {
-        double depositAmount = -1;
-        while (depositAmount < 0) {
-            System.out.print("How much would you like to deposit: ");
-            depositAmount = keyboardInput.nextInt();
+    void performInterestPayment(BankAccount account) {
+        double principal = account.getBalance();
+        if (principal <= 0) {
+            System.out.println("No principal balance — no interest can accrue.");
+            return;
         }
-        userAccount.deposit(depositAmount);
+        System.out.println("Principal (current balance): " + principal);
+        System.out.println("Interest = principal × (annual rate % / 100) × (months / 12).");
+        double annualRate = promptNonNegativeAmount("Annual interest rate (% per year), e.g. 3 for 3%: ");
+        int months = promptPositiveInt("Number of months in this accrual period: ");
+        if (annualRate == 0) {
+            System.out.println("Rate is 0% — no interest credited.");
+            return;
+        }
+        try {
+            double credited = account.applyInterestPayment(annualRate, months);
+            System.out.println("Interest credited: " + credited);
+            System.out.println("New balance: " + account.getBalance());
+        } catch (IllegalArgumentException e) {
+            System.out.println("Invalid rate or period.");
+        }
+    }
+
+    void runAdminAccountActions(BankAccount account) {
+        int action = -1;
+        while (action != ADMIN_ACT_BACK_TO_LIST) {
+            displayAdminActionsForAccount(account);
+            action = getUserSelection(MAX_ADMIN_ACTION_SELECTION);
+            switch (action) {
+                case ADMIN_ACT_COLLECT_FEE:
+                    performCollectFee(account);
+                    break;
+                case ADMIN_ACT_INTEREST:
+                    performInterestPayment(account);
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    public void runAdministratorFlow() {
+        int top = -1;
+        while (top != ADMIN_BACK_TO_ROLE) {
+            displayAdministratorTopMenu();
+            top = getUserSelection(MAX_ADMIN_TOP_SELECTION);
+            if (top == ADMIN_CHOOSE_ACCOUNT) {
+                runAdminAccountSelectionLoop();
+            }
+        }
+    }
+
+    void runAdminAccountSelectionLoop() {
+        boolean backToAdminTop = false;
+        while (!backToAdminTop) {
+            BankAccount selected = promptSelectAccountOrBack();
+            if (selected == null) {
+                backToAdminTop = true;
+            } else {
+                runAdminAccountActions(selected);
+            }
+        }
     }
 
     public void runCustomerFlow() {
@@ -92,15 +235,6 @@ public class MainMenu {
             displayCustomerOptions();
             selection = getUserSelection(MAX_CUSTOMER_SELECTION);
             processCustomerInput(selection);
-        }
-    }
-
-    public void runAdministratorFlow() {
-        int selection = -1;
-        while (selection != ADMIN_BACK_TO_ROLE) {
-            displayAdministratorOptions();
-            selection = getUserSelection(MAX_ADMIN_SELECTION);
-            processAdministratorInput(selection);
         }
     }
 
