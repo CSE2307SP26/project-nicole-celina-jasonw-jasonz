@@ -27,17 +27,11 @@ public class TransferMoney {
         return accountList.size();
     }
 
-    public static void promptForSourceAccountIndex(ArrayList<Account> accountList, boolean continuePrompting) {
-        System.out.println("Enter the index of the account you want to transfer from (0-"
-                + (getNumberOfAccounts(accountList) - 1) + "): ");
+    public static int promptForAccountIndex(ArrayList<Account> accountList, boolean continuePrompting) {
         Scanner scanner = new Scanner(System.in);
-        String sourceAccountIndexInput = scanner.nextLine();
-
-        int sourceAccountIndex = convertIndexInputToInteger(sourceAccount, IndexInput, accountList, continuePrompting);
-        return 
+        String accountIndexInput = scanner.nextLine();
+        return convertIndexInputToInteger(accountIndexInput, accountList, continuePrompting);
     }
-
-
 
     public static int convertIndexInputToInteger(String accountIndexInput, ArrayList<Account> accountList,
             boolean continuePrompting) {
@@ -53,11 +47,6 @@ public class TransferMoney {
         }
     }
 
-    public static void replyForValidIndex(int accountIndex, ArrayList<Account> accountList) {
-        accountList.remove(accountIndex);
-        System.out.println("Success! This account is closed.");
-        printAccountList(accountList);
-    }
 
     public static void replyForOutOfBoundIndex(String accountIndexInput, ArrayList<Account> accountList,
             boolean continuePrompting) {
@@ -79,11 +68,32 @@ public class TransferMoney {
         }
     }
 
-    
+    public static double promptForTransferAmount(ArrayList<Account> accountList, int sourceAccountIndex, boolean continuePrompting) {
+        System.out.println("How much money do you want to transfer? (Enter a positive number): ");
+        Scanner scanner = new Scanner(System.in);
+        String transferAmountInput = scanner.nextLine();
+        double transferAmount = convertAmountInputToDouble(transferAmountInput);
+        double sourceAccountBalance = accountList[sourceAccountIndex];
+        if (transferAmount < 0 && continuePrompting){
+            System.out.println("The transfer amount should be positive.");
+            promptForTransferAmount(accountList, sourceAccountIndex, continuePrompting);
+        } else if (transferAmount >= sourceAccountBalance && continuePrompting) {
+
+        } else {
+
+        }
+    } 
 
     public static void main(String[] args) {
         ArrayList<Account> accountList = new ArrayList<>();
         initializeAccountListRandomly(accountList);
-        promptForAccountIndex(accountList, true);
+        System.out.println("Which account do you want to transfer from? (0-"
+                + (getNumberOfAccounts(accountList) - 1) + "): ");
+        int sourceAccountIndex = promptForAccountIndex(accountList, true);
+        double transferAmount = promptForTransferAmount(accountList, sourceAccountIndex, true);
+        System.out.println("Which account do you want to transfer to? (0-"
+                + (getNumberOfAccounts(accountList) - 1) + "): ");
+        int targetAccountIndex = promptForAccountIndex(accountList, true);
+        
     }
 }
