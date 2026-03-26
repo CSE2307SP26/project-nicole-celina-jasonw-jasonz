@@ -25,6 +25,15 @@ public class BankAccount {
             throw new IllegalArgumentException();
         }
     }
+    public void withdraw(double amount) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException();
+        }
+        if (amount > this.balance){
+            throw new IllegalArgumentException();
+        }
+        this.balance -= amount;
+    }
 
     public double getBalance() {
         return this.balance;

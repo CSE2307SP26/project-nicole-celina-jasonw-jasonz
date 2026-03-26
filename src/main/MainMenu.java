@@ -12,8 +12,9 @@ public class MainMenu {
     private static final int MAX_ROLE_SELECTION = 3;
 
     private static final int CUSTOMER_DEPOSIT = 1;
-    private static final int CUSTOMER_EXIT_TO_ROLE = 2;
-    private static final int MAX_CUSTOMER_SELECTION = 2;
+    private static final int CUSTOMER_WITHDRAWAL = 2;
+    private static final int CUSTOMER_EXIT_TO_ROLE = 3;
+    private static final int MAX_CUSTOMER_SELECTION = 3;
 
     private static final int ADMIN_CHOOSE_ACCOUNT = 1;
     private static final int ADMIN_BACK_TO_ROLE = 2;
@@ -52,7 +53,8 @@ public class MainMenu {
         System.out.println("Account: " + getDefaultAccount().getName()
                 + " | Balance: " + getDefaultAccount().getBalance());
         System.out.println("1. Make a deposit");
-        System.out.println("2. Return to role selection");
+        System.out.println("2. Make a withdrawal");
+        System.out.println("3. Return to role selection");
     }
 
     public void displayAdministratorTopMenu() {
@@ -112,6 +114,9 @@ public class MainMenu {
             case CUSTOMER_DEPOSIT:
                 performDeposit();
                 break;
+            case CUSTOMER_WITHDRAWAL:
+                performWithdrawal();
+                break;
             default:
                 break;
         }
@@ -126,6 +131,17 @@ public class MainMenu {
         getDefaultAccount().deposit(depositAmount);
         System.out.println("Deposit successful. New balance: " + getDefaultAccount().getBalance());
     }
+    public void performWithdrawal() {
+        double withdrawalAmount = promptNonNegativeAmount("How much would you like to withdraw: ");
+
+        if (withdrawalAmount == 0) {
+            System.out.println("No withdrawal made.");
+            return;
+        }
+        getDefaultAccount().withdraw(withdrawalAmount);
+        System.out.println("Withdrawal successful. New balance: " + getDefaultAccount().getBalance());
+    }
+
 
     /**
      * Returns chosen account, or null if user chose back.
