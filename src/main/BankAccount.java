@@ -3,9 +3,11 @@ package main;
 public class BankAccount {
 
     private double balance;
+    private String transactionHistory;
 
     public BankAccount() {
         this.balance = 0;
+        this.transactionHistory = "";
     }
 
     public void deposit(double amount) {
@@ -18,5 +20,13 @@ public class BankAccount {
 
     public double getBalance() {
         return this.balance;
+    }
+
+    public void recordTransaction(String transactionType, double amount) {
+        this.transactionHistory += transactionType + ": " + amount + "\n";
+    }
+
+    public String getTransactionHistory() {
+        return this.transactionHistory;
     }
 }
