@@ -11,9 +11,16 @@ public class MainMenu {
     private static final int ROLE_EXIT = 3;
     private static final int MAX_ROLE_SELECTION = 3;
 
-    private static final int CUSTOMER_DEPOSIT = 1;
-    private static final int CUSTOMER_EXIT_TO_ROLE = 2;
-    private static final int MAX_CUSTOMER_SELECTION = 2;
+    private static final int CUSTOMER_SELECT_ACCOUNT = 1;
+    private static final int CUSTOMER_OPEN_ACCOUNT = 2;
+    private static final int CUSTOMER_EXIT_TO_ROLE = 3;
+    private static final int MAX_CUSTOMER_MAIN_SELECTION = 3;
+
+    private static final int ACCT_DETAIL_DEPOSIT = 1;
+    private static final int ACCT_DETAIL_WITHDRAW = 2;
+    private static final int ACCT_DETAIL_TRANSFER = 3;
+    private static final int ACCT_DETAIL_BACK = 4;
+    private static final int MAX_ACCOUNT_DETAIL_SELECTION = 4;
 
     private static final int ADMIN_CHOOSE_ACCOUNT = 1;
     private static final int ADMIN_BACK_TO_ROLE = 2;
@@ -33,10 +40,6 @@ public class MainMenu {
         this.keyboardInput = new Scanner(System.in);
     }
 
-    BankAccount getDefaultAccount() {
-        return accounts.get(0);
-    }
-
     public void displayRoleSelection() {
         System.out.println();
         System.out.println("Welcome to the 237 Bank App!");
@@ -46,13 +49,12 @@ public class MainMenu {
         System.out.println("3. Exit the app");
     }
 
-    public void displayCustomerOptions() {
+    public void displayCustomerMainMenu() {
         System.out.println();
         System.out.println("--- Customer ---");
-        System.out.println("Account: " + getDefaultAccount().getName()
-                + " | Balance: " + getDefaultAccount().getBalance());
-        System.out.println("1. Make a deposit");
-        System.out.println("2. Return to role selection");
+        System.out.println("1. Select account");
+        System.out.println("2. Open account");
+        System.out.println("3. Return to role selection");
     }
 
     public void displayAdministratorTopMenu() {
@@ -107,24 +109,58 @@ public class MainMenu {
         return n;
     }
 
-    public void processCustomerInput(int selection) {
-        switch (selection) {
-            case CUSTOMER_DEPOSIT:
-                performDeposit();
-                break;
-            default:
-                break;
+    void runOpenAccount() {
+        keyboardInput.nextLine();
+        System.out.print("Name for the new account: ");
+        String name = keyboardInput.nextLine().trim();
+        if (name.isEmpty()) {
+            System.out.println("Account name cannot be empty.");
+            return;
+        }
+        accounts.add(new BankAccount(name));
+        System.out.println("Account opened: " + name);
+    }
+
+    void displayAccountDetailMenu(BankAccount account) {
+        System.out.println();
+        System.out.println("--- Account detail: " + account.getName() + " ---");
+        System.out.println("Balance: " + account.getBalance());
+        System.out.println("1. Deposit");
+        System.out.println("2. Withdraw");
+        System.out.println("3. Transfer money");
+        System.out.println("4. Back to customer menu");
+    }
+
+    void runAccountDetailLoop(BankAccount account) {
+        int action = -1;
+        while (action != ACCT_DETAIL_BACK) {
+            displayAccountDetailMenu(account);
+            action = getUserSelection(MAX_ACCOUNT_DETAIL_SELECTION);
+            switch (action) {
+                case ACCT_DETAIL_DEPOSIT:
+                    System.out.println("(Deposit — not implemented yet.)");
+                    break;
+                case ACCT_DETAIL_WITHDRAW:
+                    System.out.println("(Withdraw — not implemented yet.)");
+                    break;
+                case ACCT_DETAIL_TRANSFER:
+                    System.out.println("(Transfer money — not implemented yet.)");
+                    break;
+                default:
+                    break;
+            }
         }
     }
 
-    public void performDeposit() {
-        double depositAmount = promptNonNegativeAmount("How much would you like to deposit: ");
-        if (depositAmount == 0) {
-            System.out.println("No deposit made.");
+    void runSelectAccountFlow() {
+        if (accounts.isEmpty()) {
+            System.out.println("You have no accounts yet. Open an account first.");
             return;
         }
-        getDefaultAccount().deposit(depositAmount);
-        System.out.println("Deposit successful. New balance: " + getDefaultAccount().getBalance());
+        BankAccount selected = promptSelectAccountOrBack();
+        if (selected != null) {
+            runAccountDetailLoop(selected);
+        }
     }
 
     /**
@@ -232,9 +268,18 @@ public class MainMenu {
     public void runCustomerFlow() {
         int selection = -1;
         while (selection != CUSTOMER_EXIT_TO_ROLE) {
-            displayCustomerOptions();
-            selection = getUserSelection(MAX_CUSTOMER_SELECTION);
-            processCustomerInput(selection);
+            displayCustomerMainMenu();
+            selection = getUserSelection(MAX_CUSTOMER_MAIN_SELECTION);
+            switch (selection) {
+                case CUSTOMER_SELECT_ACCOUNT:
+                    runSelectAccountFlow();
+                    break;
+                case CUSTOMER_OPEN_ACCOUNT:
+                    runOpenAccount();
+                    break;
+                default:
+                    break;
+            }
         }
     }
 
