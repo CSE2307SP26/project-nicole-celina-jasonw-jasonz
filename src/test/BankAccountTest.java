@@ -2,6 +2,7 @@ package test;
 
 import main.BankAccount;
 import main.MainMenu;
+import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,6 @@ public class BankAccountTest {
             //do nothing, test passes
         }
     }
-
     // customer test: withdrawal
     @Test
     public void testWithdrawal() {
@@ -166,6 +166,77 @@ public class BankAccountTest {
         assertEquals(50, other.getBalance(), 0.001);
     }
 
+    //customer test: open account
+    @Test
+    public void testCreateAccountStoresInputName() {
+        BankAccount testAccount = new BankAccount("Savings");
+        assertEquals("Savings", testAccount.getAccountName());
+    }
+
+    @Test
+    public void testCreateAccountHasZeroBalance() {
+        BankAccount testAccount = new BankAccount("Savings");
+        assertEquals(0, testAccount.getBalance(), 0.005);
+    }
+
+    //customer test: transaction history
+    @Test
+    public void testNewAccountHasNoTransactionHistory() {
+        BankAccount testAccount = new BankAccount();
+        List<String> transactionHistory = testAccount.getTransactionHistory();
+        assertEquals(0, transactionHistory.size());
+    }
+
+    @Test
+    public void testDepositTransactionRecorded() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.recordTransaction("Deposit", 50);
+        List<String> transactionHistory = testAccount.getTransactionHistory();
+        assertEquals(1, transactionHistory.size());
+        assertEquals("Deposit: 50.0", transactionHistory.get(0));
+    }
+
+    @Test
+    public void testWithdrawRecordsNegative() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.recordTransaction("Withdraw", -30);
+        List<String> transactionHistory = testAccount.getTransactionHistory();
+        assertEquals(1, transactionHistory.size());
+        assertEquals("Withdraw: -30.0", transactionHistory.get(0));
+    }
+
+    @Test
+    public void testTransferOutRecordsNegative() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.recordTransaction("Transfer Out", -20);
+        List<String> transactionHistory = testAccount.getTransactionHistory();
+        assertEquals(1, transactionHistory.size());
+        assertEquals("Transfer Out: -20.0", transactionHistory.get(0));
+    }
+
+    @Test
+    public void testTransferInRecordsPositive() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.recordTransaction("Transfer In", 20);
+        List<String> transactionHistory = testAccount.getTransactionHistory();
+        assertEquals(1, transactionHistory.size());
+        assertEquals("Transfer In: 20.0", transactionHistory.get(0));
+    }
+
+    @Test
+    public void testMultipleTransactionsAreRecordedInOrder() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.recordTransaction("Deposit", 50);
+        testAccount.recordTransaction("Withdraw", -30);
+        testAccount.recordTransaction("Transfer Out", -20);
+        testAccount.recordTransaction("Transfer In", 20);
+        List<String> transactionHistory = testAccount.getTransactionHistory();
+        assertEquals(4, transactionHistory.size());
+        assertEquals("Deposit: 50.0", transactionHistory.get(0));
+        assertEquals("Withdraw: -30.0", transactionHistory.get(1));
+        assertEquals("Transfer Out: -20.0", transactionHistory.get(2));
+        assertEquals("Transfer In: 20.0", transactionHistory.get(3));
+    }
 
     // admin tests
     @Test
