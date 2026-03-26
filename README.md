@@ -10,11 +10,11 @@
   - Dashboard
     - Accounts Overview
     - Open Additional Account
-    - Transfer Money
   - Account Detail
     - Check Balance
     - Deposit
     - Withdraw
+    - Transfer Money (moved from dashboard to here)
     - View Transaction History
     - Close Account
 

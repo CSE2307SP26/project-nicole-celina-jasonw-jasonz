@@ -18,9 +18,11 @@ public class MainMenu {
 
     private static final int ACCT_DETAIL_DEPOSIT = 1;
     private static final int ACCT_DETAIL_WITHDRAW = 2;
-    private static final int ACCT_DETAIL_TRANSFER = 3;
-    private static final int ACCT_DETAIL_BACK = 4;
-    private static final int MAX_ACCOUNT_DETAIL_SELECTION = 4;
+    private static final int ACCT_DETAIL_CHECK_BALANCE = 3;
+    private static final int ACCT_DETAIL_TRANSFER = 4;
+    private static final int ACCT_DETAIL_CLOSE_ACCOUNT = 5;
+    private static final int ACCT_DETAIL_BACK = 6;
+    private static final int MAX_ACCOUNT_DETAIL_SELECTION = 6;
 
     private static final int ADMIN_CHOOSE_ACCOUNT = 1;
     private static final int ADMIN_BACK_TO_ROLE = 2;
@@ -40,6 +42,10 @@ public class MainMenu {
         this.keyboardInput = new Scanner(System.in);
     }
 
+    BankAccount getDefaultAccount() {
+        return accounts.get(0);
+    }
+    
     public void displayRoleSelection() {
         System.out.println();
         System.out.println("Welcome to the 237 Bank App!");
@@ -68,9 +74,18 @@ public class MainMenu {
         int selection = -1;
         while (selection < 1 || selection > max) {
             System.out.print("Please make a selection: ");
+            while (!keyboardInput.hasNextInt()) { // handle non-integer input
+                System.out.println("Invalid input. Please enter a number.");
+                keyboardInput.next();
+            }
             selection = keyboardInput.nextInt();
         }
         return selection;
+    }
+
+    
+    public List<BankAccount> getAccounts() {
+        return accounts;
     }
 
     /**
@@ -88,11 +103,14 @@ public class MainMenu {
     /**
      * Prompts for a non-negative amount (0 allowed where caller treats it as invalid loop).
      */
-    double promptNonNegativeAmount(String prompt) {
+    public double promptNonNegativeAmount(String prompt) {
         double amount = -1;
         while (amount < 0) {
             System.out.print(prompt);
             amount = keyboardInput.nextDouble();
+            if (amount < 0) {
+                System.out.println("Amount must be non-negative.");
+            }
         }
         return amount;
     }
@@ -105,6 +123,19 @@ public class MainMenu {
         while (n <= 0) {
             System.out.print(prompt);
             n = keyboardInput.nextInt();
+        }
+        return n;
+    }
+
+    // prompts for viable account index
+    public int promptAccountIndex(String prompt) {
+        int n = 0;
+        while (n - 1 < 0 || n - 1 >= accounts.size() ) {
+            System.out.print(prompt);
+            n = keyboardInput.nextInt();
+            if(n - 1 < 0 || n - 1 >= accounts.size()){
+                System.out.println("Invalid account index. Please try again.");
+            }
         }
         return n;
     }
@@ -124,26 +155,88 @@ public class MainMenu {
     void displayAccountDetailMenu(BankAccount account) {
         System.out.println();
         System.out.println("--- Account detail: " + account.getName() + " ---");
-        System.out.println("Balance: " + account.getBalance());
         System.out.println("1. Deposit");
         System.out.println("2. Withdraw");
-        System.out.println("3. Transfer money");
-        System.out.println("4. Back to customer menu");
+        System.out.println("3. Check balance");
+        System.out.println("4. Transfer money");
+        System.out.println("5. Close this account");
+        System.out.println("6. Back to customer menu");
     }
 
-    void performDeposit(BankAccount account) {
-        double amount = promptNonNegativeAmount("Amount to deposit: ");
-        if (amount == 0) {
+    public void performDeposit(BankAccount account) {
+        double depositAmount = promptNonNegativeAmount("How much would you like to deposit: ");
+        if (depositAmount == 0) {
             System.out.println("No deposit made.");
             return;
         }
         try {
-            account.deposit(amount);
-            System.out.println("Deposit successful. New balance: " + account.getBalance());
+            account.deposit(depositAmount);
+            System.out.println("Deposit successful. ");
         } catch (IllegalArgumentException e) {
             System.out.println("Invalid amount.");
         }
     }
+
+    public void performWithdrawal(BankAccount account) {
+        double withdrawalAmount = promptNonNegativeAmount("How much would you like to withdraw: ");
+
+        if (withdrawalAmount == 0) {
+            System.out.println("No withdrawal made.");
+            return;
+        }
+        try {
+            account.withdraw(withdrawalAmount);
+            System.out.println("Withdrawal successful.");
+        } catch (IllegalArgumentException e) {
+            System.out.println("Invalid amount.");
+        } catch (IllegalStateException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+    public void performCheckBalance(BankAccount account) {
+        System.out.println("Current balance: " + account.getBalance());
+    }
+
+    public void performCloseAccount(BankAccount account, boolean isTesting) {
+        accounts.remove(account);
+        System.out.println("Account [" + account.getName() + "] is closed. Taking you back to the main menu.");
+        if (!isTesting) {
+            runCustomerFlow();
+        }
+    }
+
+    public void performTransferWithdraw(BankAccount account) {
+        System.out.println("--- Transfer money between accounts ---");
+        printAccountListNumbered(accounts);
+        double transferAmount = promptNonNegativeAmount("Amount to transfer from [" + account.getName() + "]: ");
+        if (transferAmount == 0) {
+            System.out.println("No transfer made.");
+            return;
+        }
+        try {
+            account.withdraw(transferAmount);
+            performTransferDeposit(account, transferAmount);
+        } catch (IllegalArgumentException e) {
+            System.out.println("Invalid amount.");
+        } catch (IllegalStateException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    public void performTransferDeposit(BankAccount account, double transferAmount) {
+        int targetAccountIndex = promptAccountIndex("Which account would you like to transfer this amount into?");
+        BankAccount targetAccount = accounts.get(targetAccountIndex - 1);
+        if (targetAccount == account) {
+            System.out.println("You cannot transfer money to the same account.");
+            account.deposit(transferAmount); // undo the withdrawal
+            return;
+        }
+        targetAccount.deposit(transferAmount);
+        System.out.println("--- Here's your updated account balance: ---");
+        System.out.println(account.getName() + ": " + account.getBalance());
+        System.out.println(targetAccount.getName() + ": " + targetAccount.getBalance());
+    }
+
 
     void runAccountDetailLoop(BankAccount account) {
         int action = -1;
@@ -155,10 +248,16 @@ public class MainMenu {
                     performDeposit(account);
                     break;
                 case ACCT_DETAIL_WITHDRAW:
-                    System.out.println("(Withdraw — not implemented yet.)");
+                    performWithdrawal(account);
+                    break;
+                case ACCT_DETAIL_CHECK_BALANCE:
+                    performCheckBalance(account);
                     break;
                 case ACCT_DETAIL_TRANSFER:
-                    System.out.println("(Transfer money — not implemented yet.)");
+                    performTransferWithdraw(account);
+                    break;
+                case ACCT_DETAIL_CLOSE_ACCOUNT:
+                    performCloseAccount(account, false);
                     break;
                 default:
                     break;
@@ -176,6 +275,7 @@ public class MainMenu {
             runAccountDetailLoop(selected);
         }
     }
+
 
     /**
      * Returns chosen account, or null if user chose back.
