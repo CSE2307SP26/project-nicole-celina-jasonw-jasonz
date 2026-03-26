@@ -20,8 +20,9 @@ public class MainMenu {
     private static final int ACCT_DETAIL_WITHDRAW = 2;
     private static final int ACCT_DETAIL_CHECK_BALANCE = 3;
     private static final int ACCT_DETAIL_TRANSFER = 4;
-    private static final int ACCT_DETAIL_BACK = 5;
-    private static final int MAX_ACCOUNT_DETAIL_SELECTION = 5;
+    private static final int ACCT_DETAIL_CLOSE_ACCOUNT = 5;
+    private static final int ACCT_DETAIL_BACK = 6;
+    private static final int MAX_ACCOUNT_DETAIL_SELECTION = 6;
 
     private static final int ADMIN_CHOOSE_ACCOUNT = 1;
     private static final int ADMIN_BACK_TO_ROLE = 2;
@@ -139,7 +140,8 @@ public class MainMenu {
         System.out.println("2. Withdraw");
         System.out.println("3. Check balance");
         System.out.println("4. Transfer money");
-        System.out.println("5. Back to customer menu");
+        System.out.println("5. Close this account");
+        System.out.println("6. Back to customer menu");
     }
 
     public void performDeposit(BankAccount account) {
@@ -176,6 +178,12 @@ public class MainMenu {
         System.out.println("Current balance: " + account.getBalance());
     }
 
+    public void performCloseAccount(BankAccount account) {
+        accounts.remove(account);
+        System.out.println("Account [" + account.getName() + "] is closed. Taking you back to the main menu.");
+        runCustomerFlow();
+    }
+
     void runAccountDetailLoop(BankAccount account) {
         int action = -1;
         while (action != ACCT_DETAIL_BACK) {
@@ -193,6 +201,9 @@ public class MainMenu {
                     break;
                 case ACCT_DETAIL_TRANSFER:
                     System.out.println("(Transfer money — not implemented yet.)");
+                    break;
+                case ACCT_DETAIL_CLOSE_ACCOUNT:
+                    performCloseAccount(account);
                     break;
                 default:
                     break;
