@@ -41,12 +41,13 @@ public class TransferMoney {
                 return accountIndex;
             } else {
                 replyForOutOfBoundIndex(accountIndexInput, accountList, continuePrompting);
+                return -1;
             }
         } catch (NumberFormatException e) {
             replyForNonIntegerInput(accountIndexInput, accountList, continuePrompting);
+            return -1;
         }
     }
-
 
     public static void replyForOutOfBoundIndex(String accountIndexInput, ArrayList<Account> accountList,
             boolean continuePrompting) {
@@ -68,21 +69,32 @@ public class TransferMoney {
         }
     }
 
-    public static double promptForTransferAmount(ArrayList<Account> accountList, int sourceAccountIndex, boolean continuePrompting) {
+    public static double promptForTransferAmount(ArrayList<Account> accountList, int sourceAccountIndex,
+            boolean continuePrompting) {
         System.out.println("How much money do you want to transfer? (Enter a positive number): ");
         Scanner scanner = new Scanner(System.in);
         String transferAmountInput = scanner.nextLine();
-        double transferAmount = convertAmountInputToDouble(transferAmountInput);
-        double sourceAccountBalance = accountList[sourceAccountIndex];
-        if (transferAmount < 0 && continuePrompting){
-            System.out.println("The transfer amount should be positive.");
+        
+        double transferAmount = convertAmountInputToDouble(transferAmountInput, sourceAccountIndex, accountList, continuePrompting);
+        return transferAmount;
+    }
+
+    public static double convertAmountInputToDouble(String transferAmountInput, int sourceAccountIndex, ArrayList<Account> accountList,
+            boolean continuePrompting) {
+        double sourceAccountBalance = accountList.get(sourceAccountIndex).getBalance(); // get balance method
+        try {
+            double transferAmount = Double.parseDouble(transferAmountInput);
+            if (transferAmount >= 0 && transferAmount < sourceAccountBalance) {
+                return transferAmount;
+            } else {
+                System.out.println(
+                        "The transfer amount should be positive & smaller than account balance. Please try again.");
+                promptForTransferAmount(accountList, sourceAccountIndex, continuePrompting);
+            }
+        } catch (NumberFormatException e) {
             promptForTransferAmount(accountList, sourceAccountIndex, continuePrompting);
-        } else if (transferAmount >= sourceAccountBalance && continuePrompting) {
-
-        } else {
-
         }
-    } 
+    }
 
     public static void main(String[] args) {
         ArrayList<Account> accountList = new ArrayList<>();
@@ -91,9 +103,9 @@ public class TransferMoney {
                 + (getNumberOfAccounts(accountList) - 1) + "): ");
         int sourceAccountIndex = promptForAccountIndex(accountList, true);
         double transferAmount = promptForTransferAmount(accountList, sourceAccountIndex, true);
-        System.out.println("Which account do you want to transfer to? (0-"
+        System.out.println("Which account do you want to transfer into? (0-"
                 + (getNumberOfAccounts(accountList) - 1) + "): ");
         int targetAccountIndex = promptForAccountIndex(accountList, true);
-        
+
     }
 }
