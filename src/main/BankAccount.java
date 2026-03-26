@@ -29,8 +29,8 @@ public class BankAccount {
         if (amount <= 0) {
             throw new IllegalArgumentException();
         }
-        if (amount > this.balance){
-            throw new IllegalArgumentException();
+        if (this.balance < amount) {
+            throw new IllegalArgumentException("Insufficient balance");
         }
         this.balance -= amount;
     }
