@@ -131,6 +131,20 @@ public class MainMenu {
         System.out.println("4. Back to customer menu");
     }
 
+    void performDeposit(BankAccount account) {
+        double amount = promptNonNegativeAmount("Amount to deposit: ");
+        if (amount == 0) {
+            System.out.println("No deposit made.");
+            return;
+        }
+        try {
+            account.deposit(amount);
+            System.out.println("Deposit successful. New balance: " + account.getBalance());
+        } catch (IllegalArgumentException e) {
+            System.out.println("Invalid amount.");
+        }
+    }
+
     void runAccountDetailLoop(BankAccount account) {
         int action = -1;
         while (action != ACCT_DETAIL_BACK) {
@@ -138,7 +152,7 @@ public class MainMenu {
             action = getUserSelection(MAX_ACCOUNT_DETAIL_SELECTION);
             switch (action) {
                 case ACCT_DETAIL_DEPOSIT:
-                    System.out.println("(Deposit — not implemented yet.)");
+                    performDeposit(account);
                     break;
                 case ACCT_DETAIL_WITHDRAW:
                     System.out.println("(Withdraw — not implemented yet.)");
