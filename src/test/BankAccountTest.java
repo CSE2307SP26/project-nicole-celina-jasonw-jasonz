@@ -170,6 +170,30 @@ public class BankAccountTest {
     }
 
     @Test
+    public void testLargeTransferIsQueuedNotExecuted() {
+        TestMainMenu menu = new TestMainMenu();
+
+        BankAccount source = new BankAccount("Source");
+        BankAccount target = new BankAccount("Target");
+
+        source.deposit(5000);
+        target.deposit(50);
+
+        menu.getAccounts().clear();
+        menu.getAccounts().add(source);
+        menu.getAccounts().add(target);
+
+        menu.testAmount = MainMenu.LARGE_TRANSFER_THRESHOLD + 1;
+        menu.testTargetIndex = 2;
+
+        menu.performTransferWithdraw(source);
+
+        assertEquals(1, menu.getPendingLargeTransferCount());
+        assertEquals(5000, source.getBalance(), 0.001);
+        assertEquals(50, target.getBalance(), 0.001);
+    }
+
+    @Test
     public void testTransferToSameAccountIsUndone() {
         TestMainMenu menu = new TestMainMenu();
 

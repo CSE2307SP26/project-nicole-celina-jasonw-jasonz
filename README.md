@@ -14,13 +14,14 @@
     - Check Balance
     - Deposit
     - Withdraw
-    - Transfer money
+    - Transfer money (large transfers may require administrator approval)
     - View transaction history
     - Close account
 
 - Administrator
   - Dashboard
     - Search Customer / Account
+    - Pending large transfers (approve or deny)
   - Account Detail
     - Collect Fees
     - Add Interest Payment
@@ -43,13 +44,14 @@ Bank System
 │       ├── Check Balance
 │       ├── Deposit
 │       ├── Withdraw
-│       └── Transfer Money
-│       ├── View Transaction History
-│       └── Close Account
+│       ├── Transfer money
+│       ├── View transaction history
+│       └── Close account
 │
 └── Administrator
     ├── Dashboard
-    │   └── Search Customer / Account
+    │   ├── Search customer / account
+    │   └── Pending large transfers (approve / deny)
     │
     └── Account Detail
         ├── Collect Fees
@@ -68,6 +70,7 @@ Bank System
 ## User stories Iteration 2
 
 1. A bank admin should be able to freeze existing accounts. (Jason Zhao)
+2. A bank administrator should be able to approve or deny a large transfer request (over $10,000) from a customer. (Jason Zhao)
 
 
 ## User stories Iteration 1
