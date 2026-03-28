@@ -26,8 +26,12 @@ public class MainMenu {
     private static final int MAX_ACCOUNT_DETAIL_SELECTION = 7;
 
     private static final int ADMIN_CHOOSE_ACCOUNT = 1;
-    private static final int ADMIN_BACK_TO_ROLE = 2;
-    private static final int MAX_ADMIN_TOP_SELECTION = 2;
+    private static final int ADMIN_REVIEW_PENDING_TRANSFERS = 2;
+    private static final int ADMIN_BACK_TO_ROLE = 3;
+    private static final int MAX_ADMIN_TOP_SELECTION = 3;
+
+    /** Transfers above this amount require administrator approval before funds move. */
+    public static final double LARGE_TRANSFER_THRESHOLD = 10000.0;
 
     private static final int ADMIN_ACT_COLLECT_FEE = 1;
     private static final int ADMIN_ACT_INTEREST = 2;
@@ -37,12 +41,30 @@ public class MainMenu {
     private static final int MAX_ADMIN_ACTION_SELECTION = 5;
 
     private final List<BankAccount> accounts;
+    private final List<PendingLargeTransfer> pendingLargeTransfers;
     private final Scanner keyboardInput;
+
+    public static class PendingLargeTransfer {
+        public final BankAccount from;
+        public final BankAccount to;
+        public final double amount;
+
+        public PendingLargeTransfer(BankAccount from, BankAccount to, double amount) {
+            this.from = from;
+            this.to = to;
+            this.amount = amount;
+        }
+    }
 
     public MainMenu() {
         this.accounts = new ArrayList<>();
         this.accounts.add(new BankAccount("Default Account"));
+        this.pendingLargeTransfers = new ArrayList<>();
         this.keyboardInput = new Scanner(System.in);
+    }
+
+    public int getPendingLargeTransferCount() {
+        return pendingLargeTransfers.size();
     }
 
     BankAccount getDefaultAccount() {
@@ -70,7 +92,8 @@ public class MainMenu {
         System.out.println();
         System.out.println("--- Administrator ---");
         System.out.println("1. Select account to manage");
-        System.out.println("2. Return to role selection");
+        System.out.println("2. Review pending large transfers");
+        System.out.println("3. Return to role selection");
     }
 
     public int getUserSelection(int max) {
@@ -239,6 +262,16 @@ public class MainMenu {
             System.out.println("The destination account is frozen. Transfers are not allowed.");
             return;
         }
+        if (transferAmount > LARGE_TRANSFER_THRESHOLD) {
+            if (account.getBalance() < transferAmount) {
+                System.out.println("Insufficient balance.");
+                return;
+            }
+            pendingLargeTransfers.add(new PendingLargeTransfer(account, targetAccount, transferAmount));
+            System.out.println("This transfer exceeds $" + LARGE_TRANSFER_THRESHOLD
+                    + " and requires administrator approval. Your request has been submitted.");
+            return;
+        }
         try {
             completeImmediateTransfer(account, targetAccount, transferAmount);
         } catch (IllegalArgumentException e) {
@@ -256,6 +289,68 @@ public class MainMenu {
         System.out.println("--- Here's your updated account balance: ---");
         System.out.println(from.getAccountName() + ": " + from.getBalance());
         System.out.println(to.getAccountName() + ": " + to.getBalance());
+    }
+
+    void runPendingLargeTransfersReview() {
+        while (true) {
+            if (pendingLargeTransfers.isEmpty()) {
+                System.out.println("No pending large transfer requests.");
+                return;
+            }
+            System.out.println();
+            System.out.println("--- Pending large transfers (over $" + LARGE_TRANSFER_THRESHOLD + ") ---");
+            for (int i = 0; i < pendingLargeTransfers.size(); i++) {
+                PendingLargeTransfer p = pendingLargeTransfers.get(i);
+                System.out.println((i + 1) + ". " + p.from.getAccountName() + " -> " + p.to.getAccountName()
+                        + " | $" + p.amount);
+            }
+            int backIndex = pendingLargeTransfers.size() + 1;
+            System.out.println("  " + backIndex + ". Back");
+            int choice = getUserSelection(backIndex);
+            if (choice == backIndex) {
+                return;
+            }
+            PendingLargeTransfer selected = pendingLargeTransfers.get(choice - 1);
+            System.out.println("1. Approve");
+            System.out.println("2. Deny");
+            System.out.println("3. Cancel");
+            int action = getUserSelection(3);
+            if (action == 1) {
+                approvePendingLargeTransfer(selected);
+            } else if (action == 2) {
+                denyPendingLargeTransfer(selected);
+            }
+        }
+    }
+
+    void approvePendingLargeTransfer(PendingLargeTransfer p) {
+        int idx = pendingLargeTransfers.indexOf(p);
+        if (idx < 0) {
+            System.out.println("That request is no longer pending.");
+            return;
+        }
+        if (p.from.isFrozen() || p.to.isFrozen()) {
+            System.out.println("Cannot approve: one or both accounts are frozen.");
+            return;
+        }
+        if (p.from.getBalance() < p.amount) {
+            System.out.println("Cannot approve: insufficient balance. Request removed.");
+            pendingLargeTransfers.remove(idx);
+            return;
+        }
+        try {
+            completeImmediateTransfer(p.from, p.to, p.amount);
+            pendingLargeTransfers.remove(p);
+            System.out.println("Large transfer approved and completed.");
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            System.out.println("Transfer failed: " + e.getMessage());
+        }
+    }
+
+    void denyPendingLargeTransfer(PendingLargeTransfer p) {
+        if (pendingLargeTransfers.remove(p)) {
+            System.out.println("Request denied and removed.");
+        }
     }
 
     public void performViewTransactionHistory(BankAccount account) {
@@ -427,6 +522,8 @@ public class MainMenu {
             top = getUserSelection(MAX_ADMIN_TOP_SELECTION);
             if (top == ADMIN_CHOOSE_ACCOUNT) {
                 runAdminAccountSelectionLoop();
+            } else if (top == ADMIN_REVIEW_PENDING_TRANSFERS) {
+                runPendingLargeTransfersReview();
             }
         }
     }
