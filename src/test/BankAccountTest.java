@@ -17,6 +17,32 @@ public class BankAccountTest {
         assertEquals(50, testAccount.getBalance(), 0.01);
     }
 
+    @Test
+    public void testDepositOnFrozenAccountFails() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.deposit(50);
+        testAccount.setFrozen(true);
+        try {
+            testAccount.deposit(10);
+            fail();
+        } catch (IllegalStateException e) {
+            assertEquals(50, testAccount.getBalance(), 0.01);
+        }
+    }
+
+    @Test
+    public void testWithdrawOnFrozenAccountFails() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.deposit(50);
+        testAccount.setFrozen(true);
+        try {
+            testAccount.withdraw(10);
+            fail();
+        } catch (IllegalStateException e) {
+            assertEquals(50, testAccount.getBalance(), 0.01);
+        }
+    }
+
 
     @Test
     public void testInvalidDeposit() {

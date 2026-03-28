@@ -7,6 +7,7 @@ public class BankAccount {
 
     private final String accountName;
     private double balance;
+    private boolean frozen;
     private List<String> transactionHistory;
 
     public BankAccount() {
@@ -16,6 +17,7 @@ public class BankAccount {
     public BankAccount(String accountName) {
         this.accountName = accountName;
         this.balance = 0;
+        this.frozen = false;
         this.transactionHistory = new ArrayList<>();
     }
 
@@ -23,7 +25,18 @@ public class BankAccount {
         return accountName;
     }
 
+    public boolean isFrozen() {
+        return frozen;
+    }
+
+    public void setFrozen(boolean frozen) {
+        this.frozen = frozen;
+    }
+
     public void deposit(double amount) {
+        if (this.frozen) {
+            throw new IllegalStateException("Account is frozen");
+        }
         if (amount > 0) {
             this.balance += amount;
         } else {
@@ -31,6 +44,9 @@ public class BankAccount {
         }
     }
     public void withdraw(double amount) {
+        if (this.frozen) {
+            throw new IllegalStateException("Account is frozen");
+        }
         if (amount <= 0) {
             throw new IllegalArgumentException();
         }

@@ -31,8 +31,10 @@ public class MainMenu {
 
     private static final int ADMIN_ACT_COLLECT_FEE = 1;
     private static final int ADMIN_ACT_INTEREST = 2;
-    private static final int ADMIN_ACT_BACK_TO_LIST = 3;
-    private static final int MAX_ADMIN_ACTION_SELECTION = 3;
+    private static final int ADMIN_ACT_FREEZE = 3;
+    private static final int ADMIN_ACT_UNFREEZE = 4;
+    private static final int ADMIN_ACT_BACK_TO_LIST = 5;
+    private static final int MAX_ADMIN_ACTION_SELECTION = 5;
 
     private final List<BankAccount> accounts;
     private final Scanner keyboardInput;
@@ -96,8 +98,9 @@ public class MainMenu {
         System.out.println("Accounts:");
         for (int i = 0; i < list.size(); i++) {
             BankAccount a = list.get(i);
+            String frozenTag = a.isFrozen() ? " [FROZEN]" : "";
             System.out.println("  " + (i + 1) + ". " + a.getAccountName()
-                    + " — balance: " + a.getBalance());
+                    + " — balance: " + a.getBalance() + frozenTag);
         }
     }
 
@@ -156,6 +159,9 @@ public class MainMenu {
     void displayAccountDetailMenu(BankAccount account) {
         System.out.println();
         System.out.println("--- Account detail: " + account.getAccountName() + " ---");
+        if (account.isFrozen()) {
+            System.out.println("(This account is frozen: deposits, withdrawals, and transfers are disabled.)");
+        }
         System.out.println("1. Deposit");
         System.out.println("2. Withdraw");
         System.out.println("3. Check balance");
@@ -175,6 +181,8 @@ public class MainMenu {
             account.deposit(depositAmount);
             account.recordTransaction("Deposit", depositAmount);
             System.out.println("Deposit successful. ");
+        } catch (IllegalStateException e) {
+            System.out.println(e.getMessage());
         } catch (IllegalArgumentException e) {
             System.out.println("Invalid amount.");
         }
@@ -191,10 +199,10 @@ public class MainMenu {
             account.withdraw(withdrawalAmount);
             account.recordTransaction("Withdraw", -withdrawalAmount);
             System.out.println("Withdrawal successful.");
-        } catch (IllegalArgumentException e) {
-            System.out.println("Invalid amount.");
         } catch (IllegalStateException e) {
             System.out.println(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            System.out.println("Invalid amount.");
         }
     }
     public void performCheckBalance(BankAccount account) {
@@ -211,16 +219,28 @@ public class MainMenu {
 
     public void performTransferWithdraw(BankAccount account) {
         System.out.println("--- Transfer money between accounts ---");
+        if (account.isFrozen()) {
+            System.out.println("This account is frozen. Transfers are not allowed.");
+            return;
+        }
         printAccountListNumbered(accounts);
         double transferAmount = promptNonNegativeAmount("Amount to transfer from [" + account.getAccountName() + "]: ");
         if (transferAmount == 0) {
             System.out.println("No transfer made.");
             return;
         }
+        int targetAccountIndex = promptAccountIndex("Select the account to transfer this amount into: ");
+        BankAccount targetAccount = accounts.get(targetAccountIndex - 1);
+        if (targetAccount == account) {
+            System.out.println("You cannot transfer money to the same account.");
+            return;
+        }
+        if (targetAccount.isFrozen()) {
+            System.out.println("The destination account is frozen. Transfers are not allowed.");
+            return;
+        }
         try {
-            account.withdraw(transferAmount);
-            account.recordTransaction("Transfer Out", -transferAmount);
-            performTransferDeposit(account, transferAmount);
+            completeImmediateTransfer(account, targetAccount, transferAmount);
         } catch (IllegalArgumentException e) {
             System.out.println("Invalid amount.");
         } catch (IllegalStateException e) {
@@ -228,19 +248,14 @@ public class MainMenu {
         }
     }
 
-    public void performTransferDeposit(BankAccount account, double transferAmount) {
-        int targetAccountIndex = promptAccountIndex("Select the account to transfer this amount into: ");
-        BankAccount targetAccount = accounts.get(targetAccountIndex - 1);
-        if (targetAccount == account) {
-            System.out.println("You cannot transfer money to the same account.");
-            account.deposit(transferAmount); // undo the withdrawal
-            return;
-        }
-        targetAccount.deposit(transferAmount);
-        targetAccount.recordTransaction("Transfer In", transferAmount);
+    void completeImmediateTransfer(BankAccount from, BankAccount to, double transferAmount) {
+        from.withdraw(transferAmount);
+        from.recordTransaction("Transfer Out", -transferAmount);
+        to.deposit(transferAmount);
+        to.recordTransaction("Transfer In", transferAmount);
         System.out.println("--- Here's your updated account balance: ---");
-        System.out.println(account.getAccountName() + ": " + account.getBalance());
-        System.out.println(targetAccount.getAccountName() + ": " + targetAccount.getBalance());
+        System.out.println(from.getAccountName() + ": " + from.getBalance());
+        System.out.println(to.getAccountName() + ": " + to.getBalance());
     }
 
     public void performViewTransactionHistory(BankAccount account) {
@@ -315,10 +330,13 @@ public class MainMenu {
 
     void displayAdminActionsForAccount(BankAccount account) {
         System.out.println();
-        System.out.println("Managing: " + account.getAccountName() + " | Balance: " + account.getBalance());
+        System.out.println("Managing: " + account.getAccountName() + " | Balance: " + account.getBalance()
+                + (account.isFrozen() ? " | FROZEN" : ""));
         System.out.println("1. Collect fee");
         System.out.println("2. Apply interest payment (rate % × principal × period)");
-        System.out.println("3. Back to account list");
+        System.out.println("3. Freeze account");
+        System.out.println("4. Unfreeze account");
+        System.out.println("5. Back to account list");
     }
 
     void performCollectFee(BankAccount account) {
@@ -360,6 +378,24 @@ public class MainMenu {
         }
     }
 
+    void performFreezeAccount(BankAccount account) {
+        if (account.isFrozen()) {
+            System.out.println("This account is already frozen.");
+            return;
+        }
+        account.setFrozen(true);
+        System.out.println("Account \"" + account.getAccountName() + "\" is now frozen.");
+    }
+
+    void performUnfreezeAccount(BankAccount account) {
+        if (!account.isFrozen()) {
+            System.out.println("This account is not frozen.");
+            return;
+        }
+        account.setFrozen(false);
+        System.out.println("Account \"" + account.getAccountName() + "\" is now unfrozen.");
+    }
+
     void runAdminAccountActions(BankAccount account) {
         int action = -1;
         while (action != ADMIN_ACT_BACK_TO_LIST) {
@@ -371,6 +407,12 @@ public class MainMenu {
                     break;
                 case ADMIN_ACT_INTEREST:
                     performInterestPayment(account);
+                    break;
+                case ADMIN_ACT_FREEZE:
+                    performFreezeAccount(account);
+                    break;
+                case ADMIN_ACT_UNFREEZE:
+                    performUnfreezeAccount(account);
                     break;
                 default:
                     break;
