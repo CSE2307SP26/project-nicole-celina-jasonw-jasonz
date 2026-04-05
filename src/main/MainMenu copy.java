@@ -74,15 +74,10 @@ public class MainMenu {
     public void displayRoleSelection() {
         System.out.println();
         System.out.println("Welcome to the 237 Bank App!");
-        System.out.println("Do you have an account with us?");
-        System.out.println("1. Log in (customer / admin)");
-        System.out.println("2. Sign up for a customer account");
+        System.out.println("Select your role:");
+        System.out.println("1. Customer");
+        System.out.println("2. Administrator");
         System.out.println("3. Exit the app");
-    }
-
-    public void displayCustomerSignupMenu() {
-        System.out.println();
-        System.out.println("Please enter your username: ");
     }
 
     public void displayCustomerMainMenu() {
