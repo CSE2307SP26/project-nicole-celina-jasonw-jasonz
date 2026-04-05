@@ -6,10 +6,10 @@ import java.util.Scanner;
 
 public class MainMenu {
 
-    private static final int ROLE_CUSTOMER = 1;
-    private static final int ROLE_ADMINISTRATOR = 2;
-    private static final int ROLE_EXIT = 3;
-    private static final int MAX_ROLE_SELECTION = 3;
+    private static final int ACCOUNT_AUTH_LOGIN = 1;
+    private static final int ACCOUNT_AUTH_SIGNUP = 2;
+    private static final int ACCOUNT_AUTH_EXIT = 3;
+    private static final int MAX_AUTH_SELECTION = 3;
 
     private static final int CUSTOMER_SELECT_ACCOUNT = 1;
     private static final int CUSTOMER_OPEN_ACCOUNT = 2;
@@ -27,8 +27,9 @@ public class MainMenu {
 
     private static final int ADMIN_CHOOSE_ACCOUNT = 1;
     private static final int ADMIN_REVIEW_PENDING_TRANSFERS = 2;
-    private static final int ADMIN_BACK_TO_ROLE = 3;
-    private static final int MAX_ADMIN_TOP_SELECTION = 3;
+    private static final int ADMIN_REVIEW_ACCOUNT_LIST = 3;
+    private static final int ADMIN_BACK_TO_ROLE = 4;
+    private static final int MAX_ADMIN_TOP_SELECTION = 4;
 
     /** Transfers above this amount require administrator approval before funds move. */
     public static final double LARGE_TRANSFER_THRESHOLD = 10000.0;
@@ -71,7 +72,7 @@ public class MainMenu {
         return accounts.get(0);
     }
 
-    public void displayRoleSelection() {
+    public void displayAuthModeSelection() {
         System.out.println();
         System.out.println("Welcome to the 237 Bank App!");
         System.out.println("Do you have an account with us?");
@@ -563,15 +564,21 @@ public class MainMenu {
         }
     }
 
+    public void runSignUpFlow(){
+        int 
+    }
+
     public void run() {
-        int role = -1;
-        while (role != ROLE_EXIT) {
-            displayRoleSelection();
-            role = getUserSelection(MAX_ROLE_SELECTION);
-            if (role == ROLE_CUSTOMER) {
-                runCustomerFlow();
-            } else if (role == ROLE_ADMINISTRATOR) {
-                runAdministratorFlow();
+        int accountAccessMethod = -1;
+        while (accountAccessMethod != ACCOUNT_AUTH_EXIT) {
+            displayAuthModeSelection();
+            accountAccessMethod = getUserSelection(MAX_AUTH_SELECTION);
+            if (accountAccessMethod == ACCOUNT_AUTH_LOGIN) {
+                // runCustomerFlow(); run this after logged in / signed up
+                runLogInFlow(); //TODO
+            } else if (accountAccessMethod == ACCOUNT_AUTH_SIGNUP) {
+                // runAdministratorFlow();
+                runSignUpFlow(); 
             }
         }
         System.out.println();

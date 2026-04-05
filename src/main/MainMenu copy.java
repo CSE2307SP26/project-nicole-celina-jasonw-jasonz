@@ -27,8 +27,9 @@ public class MainMenu {
 
     private static final int ADMIN_CHOOSE_ACCOUNT = 1;
     private static final int ADMIN_REVIEW_PENDING_TRANSFERS = 2;
-    private static final int ADMIN_BACK_TO_ROLE = 3;
-    private static final int MAX_ADMIN_TOP_SELECTION = 3;
+    private static final int ADMIN_REVIEW_ACCOUNT_LIST = 3;
+    private static final int ADMIN_BACK_TO_ROLE = 4;
+    private static final int MAX_ADMIN_TOP_SELECTION = 4;
 
     /** Transfers above this amount require administrator approval before funds move. */
     public static final double LARGE_TRANSFER_THRESHOLD = 10000.0;
@@ -524,6 +525,8 @@ public class MainMenu {
                 runAdminAccountSelectionLoop();
             } else if (top == ADMIN_REVIEW_PENDING_TRANSFERS) {
                 runPendingLargeTransfersReview();
+            } else if (top == ADMIN_REVIEW_ACCOUNT_LIST) {
+                runAccountListReview();
             }
         }
     }
