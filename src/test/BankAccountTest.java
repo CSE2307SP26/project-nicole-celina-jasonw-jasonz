@@ -2,9 +2,17 @@ package test;
 
 import main.BankAccount;
 import main.MainMenu;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.PrintStream;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 public class BankAccountTest {
@@ -101,7 +109,7 @@ public class BankAccountTest {
     @Test
     public void testValidAccountClosing() {
         MainMenu menu = new MainMenu();
-        BankAccount testAccount = new BankAccount("Test");
+        BankAccount testAccount = new BankAccount("Test", "testpassword");
         menu.getAccounts().add(testAccount);
         menu.performCloseAccount(testAccount, true);
         assertEquals(false, menu.getAccounts().contains(testAccount));
@@ -128,8 +136,8 @@ public class BankAccountTest {
     public void testTransferAmountZeroMakesNoChange() {
         TestMainMenu menu = new TestMainMenu();
 
-        BankAccount source = new BankAccount("Source");
-        BankAccount target = new BankAccount("Target");
+        BankAccount source = new BankAccount("Source", "testpassword");
+        BankAccount target = new BankAccount("Target", "testpassword");
 
         source.deposit(100);
         target.deposit(50);
@@ -150,8 +158,8 @@ public class BankAccountTest {
     public void testValidTransferMovesMoney() {
         TestMainMenu menu = new TestMainMenu();
 
-        BankAccount source = new BankAccount("Source");
-        BankAccount target = new BankAccount("Target");
+        BankAccount source = new BankAccount("Source", "testpassword");
+        BankAccount target = new BankAccount("Target", "testpassword");
 
         source.deposit(100);
         target.deposit(50);
@@ -173,10 +181,10 @@ public class BankAccountTest {
     public void testLargeTransferIsQueuedNotExecuted() {
         TestMainMenu menu = new TestMainMenu();
 
-        BankAccount source = new BankAccount("Source");
-        BankAccount target = new BankAccount("Target");
+        BankAccount source = new BankAccount("Source", "testpassword");
+        BankAccount target = new BankAccount("Target", "testpassword");
 
-        source.deposit(5000);
+        source.deposit(MainMenu.LARGE_TRANSFER_THRESHOLD + 1);
         target.deposit(50);
 
         menu.getAccounts().clear();
@@ -189,7 +197,7 @@ public class BankAccountTest {
         menu.performTransferWithdraw(source);
 
         assertEquals(1, menu.getPendingLargeTransferCount());
-        assertEquals(5000, source.getBalance(), 0.001);
+        assertEquals(MainMenu.LARGE_TRANSFER_THRESHOLD + 1, source.getBalance(), 0.001);
         assertEquals(50, target.getBalance(), 0.001);
     }
 
@@ -197,8 +205,8 @@ public class BankAccountTest {
     public void testTransferToSameAccountIsUndone() {
         TestMainMenu menu = new TestMainMenu();
 
-        BankAccount source = new BankAccount("Source");
-        BankAccount other = new BankAccount("Other");
+        BankAccount source = new BankAccount("Source", "testpassword");
+        BankAccount other = new BankAccount("Other", "testpassword");
 
         source.deposit(100);
         other.deposit(50);
@@ -219,13 +227,13 @@ public class BankAccountTest {
     //customer test: open account
     @Test
     public void testCreateAccountStoresInputName() {
-        BankAccount testAccount = new BankAccount("Savings");
+        BankAccount testAccount = new BankAccount("Savings", "testpassword");
         assertEquals("Savings", testAccount.getAccountName());
     }
 
     @Test
     public void testCreateAccountHasZeroBalance() {
-        BankAccount testAccount = new BankAccount("Savings");
+        BankAccount testAccount = new BankAccount("Savings", "testpassword");
         assertEquals(0, testAccount.getBalance(), 0.005);
     }
 
@@ -368,5 +376,88 @@ public class BankAccountTest {
         } catch (IllegalArgumentException e) {
             assertEquals(100, testAccount.getBalance(), 0.01);
         }
+    }
+
+    // features: customer sign up & print accounts 
+    @Nested
+    class SignUpTests {
+        private static final String ACCOUNTS_FILE = "accounts.json";
+
+        @BeforeEach
+        void setUp() {
+            new File(ACCOUNTS_FILE).delete();
+        }
+
+        @AfterEach
+        void tearDown() {
+            new File(ACCOUNTS_FILE).delete();
+        }
+
+        @Test
+        void testRecordNewAccountReturnsTrue() {
+            MainMenu menu = new MainMenu();
+            assertTrue(menu.recordNewAccount(new BankAccount("alice", "pass")));
+        }
+
+        @Test
+        void testRecordNewAccountAddsToAccountsList() {
+            MainMenu menu = new MainMenu();
+            BankAccount newAccount = new BankAccount("alice", "pass");
+            menu.recordNewAccount(newAccount);
+            assertTrue(menu.getAccounts().contains(newAccount));
+        }
+
+        @Test
+        void testRecordNewAccountDuplicateUsernameReturnsFalse() {
+            MainMenu menu = new MainMenu();
+            menu.recordNewAccount(new BankAccount("alice", "pass1"));
+            assertFalse(menu.recordNewAccount(new BankAccount("alice", "pass2")));
+        }
+
+        @Test
+        void testRecordNewAccountDuplicateNotAddedToList() {
+            MainMenu menu = new MainMenu();
+            menu.recordNewAccount(new BankAccount("alice", "pass1"));
+            int sizeBefore = menu.getAccounts().size();
+            menu.recordNewAccount(new BankAccount("alice", "pass2"));
+            assertEquals(sizeBefore, menu.getAccounts().size());
+        }
+
+        @Test
+        void testRecordNewAccountPersistedAcrossSessions() {
+            MainMenu menu1 = new MainMenu();
+            menu1.recordNewAccount(new BankAccount("alice", "pass"));
+            MainMenu menu2 = new MainMenu();
+            assertTrue(menu2.getAccounts().stream()
+                    .anyMatch(a -> a.getAccountName().equals("alice")));
+        }
+
+        @Test
+        void testInitializeAccountsLoadsAllPersistedAccounts() {
+            MainMenu menu1 = new MainMenu();
+            menu1.recordNewAccount(new BankAccount("bob", "pass"));
+            menu1.recordNewAccount(new BankAccount("carol", "pass"));
+            MainMenu menu2 = new MainMenu();
+            assertEquals(2, menu2.getAccounts().size());
+        }
+
+        @Test
+        void testInitializeSkipsDefaultAccount() {
+            MainMenu menu1 = new MainMenu();
+            menu1.recordNewAccount(new BankAccount("defaultaccount", "pass"));
+            MainMenu menu2 = new MainMenu();
+            assertFalse(menu2.getAccounts().stream()
+                    .anyMatch(a -> a.getAccountName().equals("defaultaccount")));
+        }
+
+        @Test
+        void testDuplicateDetectedFromFileNotJustMemory() {
+            MainMenu menu1 = new MainMenu();
+            menu1.recordNewAccount(new BankAccount("alice", "pass"));
+            MainMenu menu2 = new MainMenu();
+            assertFalse(menu2.recordNewAccount(new BankAccount("alice", "differentpass")));
+        }
+
+        
     }
 }

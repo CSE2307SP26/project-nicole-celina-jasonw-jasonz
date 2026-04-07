@@ -1,21 +1,26 @@
 package main;
 
+
 import java.util.List;
 import java.util.ArrayList;
 
 public class BankAccount {
 
     private final String accountName;
+    private String accountPassword;
+    private boolean isLoggedIn;
     private double balance;
     private boolean frozen;
     private List<String> transactionHistory;
 
     public BankAccount() {
-        this("Default Account");
+        this("defaultaccount", "defaultpassword");
     }
 
-    public BankAccount(String accountName) {
+    public BankAccount(String accountName, String accountPassword) {
         this.accountName = accountName;
+        this.accountPassword = accountPassword;
+        this.isLoggedIn = false;
         this.balance = 0;
         this.frozen = false;
         this.transactionHistory = new ArrayList<>();
@@ -23,6 +28,18 @@ public class BankAccount {
 
     public String getAccountName() {
         return accountName;
+    }
+
+    public String getAccountPassword() {
+        return accountPassword;
+    }
+
+    public boolean isLoggedIn() {
+        return isLoggedIn;
+    }
+
+    public void setLoggedIn(boolean loggedIn) {
+        isLoggedIn = loggedIn;
     }
 
     public boolean isFrozen() {

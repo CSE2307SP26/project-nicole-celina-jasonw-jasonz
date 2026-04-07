@@ -17,9 +17,9 @@ fi
 
 # Run unit tests
 echo "=== Running Unit Tests ==="
-java -jar lib/junit-platform-console-standalone-*.jar \
-  -cp out --scan-classpath
+java -cp "out:lib/*:test-lib/*" \
+  org.junit.platform.console.ConsoleLauncher --scan-classpath
 
 # Run the app
 echo "=== Running App ==="
-java -cp out main.MainMenu
+java -cp "out:lib/*" main.MainMenu
