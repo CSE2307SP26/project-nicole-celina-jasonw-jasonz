@@ -58,7 +58,7 @@ public class MainMenu {
     private static final int MAX_ADMIN_ACTION_SELECTION = 5;
 
     private final List<BankAccount> accounts;
-    private static final String ACCOUNTS_FILE = "accounts.json";
+    private final String accountsFile;
     private final List<PendingLargeTransfer> pendingLargeTransfers;
     private final Scanner keyboardInput;
 
@@ -76,6 +76,11 @@ public class MainMenu {
     }
 
     public MainMenu() {
+        this("accounts.json");
+    }
+
+    public MainMenu(String accountsFile) {
+        this.accountsFile = accountsFile;
         this.accounts = new ArrayList<>();
         this.pendingLargeTransfers = new ArrayList<>();
         this.keyboardInput = new Scanner(System.in);
@@ -531,7 +536,7 @@ public class MainMenu {
             } else if (top == ADMIN_REVIEW_PENDING_TRANSFERS) {
                 runPendingLargeTransfersReview();
             } else if (top == ADMIN_REVIEW_ACCOUNT_LIST) {
-                // runPrintAccountsFromFile();
+                runPrintAccountsFromFile();
             }
         }
     }
@@ -553,7 +558,7 @@ public class MainMenu {
     // feature: customer sign up
 
     private List<BankAccount> readAccountsFromFile() {
-        File file = new File(ACCOUNTS_FILE);
+        File file = new File(accountsFile);
         if (!file.exists() || file.length() == 0) return new ArrayList<>();
         Type listType = new TypeToken<List<BankAccount>>(){}.getType();
         try (FileReader reader = new FileReader(file)) {
@@ -566,7 +571,7 @@ public class MainMenu {
     }
 
     private void writeAccountsToFile(List<BankAccount> list) {
-        try (FileWriter writer = new FileWriter(ACCOUNTS_FILE)) {
+        try (FileWriter writer = new FileWriter(accountsFile)) {
             new GsonBuilder().setPrettyPrinting().create().toJson(list, writer);
         } catch (IOException e) {
             System.out.println("Error writing accounts file.");
@@ -611,16 +616,30 @@ public class MainMenu {
 
 
     public void initializeAccountsArrayList() {
+        List<BankAccount> persisted = readAccountsFromFile();
+        persisted.removeIf(acc -> acc.getAccountName().equals("defaultaccount"));
         accounts.clear();
-        for (BankAccount acc : readAccountsFromFile()) {
-            if (!acc.getAccountName().equals("defaultaccount")) {
-                accounts.add(acc);
-            }
-        }
+        accounts.addAll(persisted);
         writeAccountsToFile(accounts);
     }
 
-
+    // feature: view all accounts (admin)
+    public void runPrintAccountsFromFile() {
+        List<BankAccount> stored = readAccountsFromFile();
+        if (stored.isEmpty()) {
+            System.out.println("No registered accounts found.");
+            return;
+        }
+        System.out.println();
+        System.out.println("Here's a list of registered customer accounts: ");
+        System.out.println("------------------------");
+        if (stored.isEmpty()) { System.out.println("(none)"); return; }
+        for (BankAccount acc : stored) {
+            System.out.println("Username: " + acc.getAccountName());
+            System.out.println("Password: " + acc.getAccountPassword());
+            System.out.println("------------------------");
+        }
+    }
 
     // TODO: adapt from previous runCustomerFlow()
     public void runLogInFlow() {

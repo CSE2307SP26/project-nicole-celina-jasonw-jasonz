@@ -5,6 +5,7 @@ import main.MainMenu;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
+import java.nio.file.Path;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 public class BankAccountTest {
 
@@ -381,27 +383,22 @@ public class BankAccountTest {
     // features: customer sign up & print accounts 
     @Nested
     class SignUpTests {
-        private static final String ACCOUNTS_FILE = "accounts.json";
+        @TempDir
+        Path tempDir;
 
-        @BeforeEach
-        void setUp() {
-            new File(ACCOUNTS_FILE).delete();
-        }
-
-        @AfterEach
-        void tearDown() {
-            new File(ACCOUNTS_FILE).delete();
+        private MainMenu makeMenu() {
+            return new MainMenu(tempDir.resolve("accounts.json").toString());
         }
 
         @Test
         void testRecordNewAccountReturnsTrue() {
-            MainMenu menu = new MainMenu();
+            MainMenu menu = makeMenu();
             assertTrue(menu.recordNewAccount(new BankAccount("alice", "pass")));
         }
 
         @Test
         void testRecordNewAccountAddsToAccountsList() {
-            MainMenu menu = new MainMenu();
+            MainMenu menu = makeMenu();
             BankAccount newAccount = new BankAccount("alice", "pass");
             menu.recordNewAccount(newAccount);
             assertTrue(menu.getAccounts().contains(newAccount));
@@ -409,14 +406,14 @@ public class BankAccountTest {
 
         @Test
         void testRecordNewAccountDuplicateUsernameReturnsFalse() {
-            MainMenu menu = new MainMenu();
+            MainMenu menu = makeMenu();
             menu.recordNewAccount(new BankAccount("alice", "pass1"));
             assertFalse(menu.recordNewAccount(new BankAccount("alice", "pass2")));
         }
 
         @Test
         void testRecordNewAccountDuplicateNotAddedToList() {
-            MainMenu menu = new MainMenu();
+            MainMenu menu = makeMenu();
             menu.recordNewAccount(new BankAccount("alice", "pass1"));
             int sizeBefore = menu.getAccounts().size();
             menu.recordNewAccount(new BankAccount("alice", "pass2"));
@@ -425,39 +422,76 @@ public class BankAccountTest {
 
         @Test
         void testRecordNewAccountPersistedAcrossSessions() {
-            MainMenu menu1 = new MainMenu();
+            String file = tempDir.resolve("accounts.json").toString();
+            MainMenu menu1 = new MainMenu(file);
             menu1.recordNewAccount(new BankAccount("alice", "pass"));
-            MainMenu menu2 = new MainMenu();
+            MainMenu menu2 = new MainMenu(file);
             assertTrue(menu2.getAccounts().stream()
                     .anyMatch(a -> a.getAccountName().equals("alice")));
         }
 
         @Test
         void testInitializeAccountsLoadsAllPersistedAccounts() {
-            MainMenu menu1 = new MainMenu();
+            String file = tempDir.resolve("accounts.json").toString();
+            MainMenu menu1 = new MainMenu(file);
             menu1.recordNewAccount(new BankAccount("bob", "pass"));
             menu1.recordNewAccount(new BankAccount("carol", "pass"));
-            MainMenu menu2 = new MainMenu();
+            MainMenu menu2 = new MainMenu(file);
             assertEquals(2, menu2.getAccounts().size());
         }
 
         @Test
         void testInitializeSkipsDefaultAccount() {
-            MainMenu menu1 = new MainMenu();
+            String file = tempDir.resolve("accounts.json").toString();
+            MainMenu menu1 = new MainMenu(file);
             menu1.recordNewAccount(new BankAccount("defaultaccount", "pass"));
-            MainMenu menu2 = new MainMenu();
+            MainMenu menu2 = new MainMenu(file);
             assertFalse(menu2.getAccounts().stream()
                     .anyMatch(a -> a.getAccountName().equals("defaultaccount")));
         }
 
         @Test
         void testDuplicateDetectedFromFileNotJustMemory() {
-            MainMenu menu1 = new MainMenu();
+            String file = tempDir.resolve("accounts.json").toString();
+            MainMenu menu1 = new MainMenu(file);
             menu1.recordNewAccount(new BankAccount("alice", "pass"));
-            MainMenu menu2 = new MainMenu();
+            MainMenu menu2 = new MainMenu(file);
             assertFalse(menu2.recordNewAccount(new BankAccount("alice", "differentpass")));
         }
 
-        
+        // runPrintAccountsFromFile tests
+        private String captureOutput(Runnable action) {
+            ByteArrayOutputStream buf = new ByteArrayOutputStream();
+            PrintStream original = System.out;
+            System.setOut(new PrintStream(buf));
+            try { action.run(); } finally { System.setOut(original); }
+            return buf.toString();
+        }
+
+        @Test
+        void testPrintAccountsShowsUsernameAndPassword() {
+            MainMenu menu = makeMenu();
+            menu.recordNewAccount(new BankAccount("alice", "secret"));
+            String output = captureOutput(menu::runPrintAccountsFromFile);
+            assertTrue(output.contains("alice"));
+            assertTrue(output.contains("secret"));
+        }
+
+        @Test
+        void testPrintAccountsShowsAllAccounts() {
+            MainMenu menu = makeMenu();
+            menu.recordNewAccount(new BankAccount("alice", "pass1"));
+            menu.recordNewAccount(new BankAccount("bob", "pass2"));
+            String output = captureOutput(menu::runPrintAccountsFromFile);
+            assertTrue(output.contains("alice"));
+            assertTrue(output.contains("bob"));
+        }
+
+        @Test
+        void testPrintAccountsEmptyFileShowsNoAccountsMessage() {
+            MainMenu menu = makeMenu();
+            String output = captureOutput(menu::runPrintAccountsFromFile);
+            assertTrue(output.contains("No registered accounts found."));
+        }
     }
 }
