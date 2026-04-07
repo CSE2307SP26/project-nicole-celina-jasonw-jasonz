@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "accountName": "www",
+    "accountPassword": "www",
+    "isLoggedIn": true,
+    "balance": 0.0,
+    "frozen": false,
+    "transactionHistory": []
+  }
+]
