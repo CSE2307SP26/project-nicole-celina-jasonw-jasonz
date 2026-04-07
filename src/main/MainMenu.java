@@ -1,15 +1,28 @@
 package main;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+
+import java.io.*;
+import java.util.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.lang.reflect.Type;
+
+
 public class MainMenu {
 
-    private static final int ROLE_CUSTOMER = 1;
-    private static final int ROLE_ADMINISTRATOR = 2;
-    private static final int ROLE_EXIT = 3;
-    private static final int MAX_ROLE_SELECTION = 3;
+    private static final int ACCOUNT_AUTH_LOGIN = 1;
+    private static final int ACCOUNT_AUTH_SIGNUP = 2;
+    private static final int ACCOUNT_AUTH_EXIT = 3;
+    private static final int MAX_AUTH_SELECTION = 3;
 
     private static final int CUSTOMER_SELECT_ACCOUNT = 1;
     private static final int CUSTOMER_OPEN_ACCOUNT = 2;
@@ -27,10 +40,14 @@ public class MainMenu {
 
     private static final int ADMIN_CHOOSE_ACCOUNT = 1;
     private static final int ADMIN_REVIEW_PENDING_TRANSFERS = 2;
-    private static final int ADMIN_BACK_TO_ROLE = 3;
-    private static final int MAX_ADMIN_TOP_SELECTION = 3;
+    private static final int ADMIN_REVIEW_ACCOUNT_LIST = 3;
+    private static final int ADMIN_BACK_TO_LOGIN = 4;
+    private static final int MAX_ADMIN_TOP_SELECTION = 4;
 
-    /** Transfers above this amount require administrator approval before funds move. */
+    /**
+     * Transfers above this amount require administrator approval before funds
+     * move.
+     */
     public static final double LARGE_TRANSFER_THRESHOLD = 10000.0;
 
     private static final int ADMIN_ACT_COLLECT_FEE = 1;
@@ -41,10 +58,12 @@ public class MainMenu {
     private static final int MAX_ADMIN_ACTION_SELECTION = 5;
 
     private final List<BankAccount> accounts;
+    private static final String ACCOUNTS_FILE = "accounts.json";
     private final List<PendingLargeTransfer> pendingLargeTransfers;
     private final Scanner keyboardInput;
 
     public static class PendingLargeTransfer {
+
         public final BankAccount from;
         public final BankAccount to;
         public final double amount;
@@ -58,9 +77,9 @@ public class MainMenu {
 
     public MainMenu() {
         this.accounts = new ArrayList<>();
-        this.accounts.add(new BankAccount("Default Account"));
         this.pendingLargeTransfers = new ArrayList<>();
         this.keyboardInput = new Scanner(System.in);
+        initializeAccountsArrayList();
     }
 
     public int getPendingLargeTransferCount() {
@@ -71,12 +90,12 @@ public class MainMenu {
         return accounts.get(0);
     }
 
-    public void displayRoleSelection() {
+    public void displayAuthModeSelection() {
         System.out.println();
         System.out.println("Welcome to the 237 Bank App!");
-        System.out.println("Select your role:");
-        System.out.println("1. Customer");
-        System.out.println("2. Administrator");
+        System.out.println("Do you have an account with us?");
+        System.out.println("1. Log in (customer / admin)");
+        System.out.println("2. Sign up for a customer account");
         System.out.println("3. Exit the app");
     }
 
@@ -93,7 +112,8 @@ public class MainMenu {
         System.out.println("--- Administrator ---");
         System.out.println("1. Select account to manage");
         System.out.println("2. Review pending large transfers");
-        System.out.println("3. Return to role selection");
+        System.out.println("3. View account login info");
+        System.out.println("4. Log out");
     }
 
     public int getUserSelection(int max) {
@@ -109,7 +129,6 @@ public class MainMenu {
         return selection;
     }
 
-    
     public List<BankAccount> getAccounts() {
         return accounts;
     }
@@ -128,7 +147,8 @@ public class MainMenu {
     }
 
     /**
-     * Prompts for a non-negative amount (0 allowed where caller treats it as invalid loop).
+     * Prompts for a non-negative amount (0 allowed where caller treats it as
+     * invalid loop).
      */
     public double promptNonNegativeAmount(String prompt) {
         double amount = -1;
@@ -157,26 +177,14 @@ public class MainMenu {
     // prompts for viable account index
     public int promptAccountIndex(String prompt) {
         int n = 0;
-        while (n - 1 < 0 || n - 1 >= accounts.size() ) {
+        while (n - 1 < 0 || n - 1 >= accounts.size()) {
             System.out.print(prompt);
             n = keyboardInput.nextInt();
-            if(n - 1 < 0 || n - 1 >= accounts.size()){
+            if (n - 1 < 0 || n - 1 >= accounts.size()) {
                 System.out.println("Invalid account index. Please try again.");
             }
         }
         return n;
-    }
-
-    void performCreateAccount() {
-        keyboardInput.nextLine();
-        System.out.print("Enter name for the new account: ");
-        String newAccountName = keyboardInput.nextLine().trim();
-        if (newAccountName.isEmpty()) {
-            System.out.println("Account name cannot be empty.");
-            return;
-        }
-        accounts.add(new BankAccount(newAccountName));
-        System.out.println("Your new account has been created: " + newAccountName);
     }
 
     void displayAccountDetailMenu(BankAccount account) {
@@ -191,7 +199,7 @@ public class MainMenu {
         System.out.println("4. Transfer money");
         System.out.println("5. View transaction history");
         System.out.println("6. Close this account");
-        System.out.println("7. Back to customer menu");
+        System.out.println("7. Exit program");
     }
 
     public void performDeposit(BankAccount account) {
@@ -228,6 +236,7 @@ public class MainMenu {
             System.out.println("Invalid amount.");
         }
     }
+
     public void performCheckBalance(BankAccount account) {
         System.out.println("Current balance: " + account.getBalance());
     }
@@ -236,7 +245,7 @@ public class MainMenu {
         accounts.remove(account);
         System.out.println("Account [" + account.getAccountName() + "] is closed. Taking you back to the main menu.");
         if (!isTesting) {
-            runCustomerFlow();
+            // runCustomerFlow();
         }
     }
 
@@ -354,18 +363,16 @@ public class MainMenu {
     }
 
     public void performViewTransactionHistory(BankAccount account) {
-        if(account.getTransactionHistory().isEmpty()) {
+        if (account.getTransactionHistory().isEmpty()) {
             System.out.println("No transactions yet.");
             return;
-        }
-        else {
+        } else {
             System.out.println("Transaction History for: " + account.getAccountName());
-            for(String transaction : account.getTransactionHistory()) {
+            for (String transaction : account.getTransactionHistory()) {
                 System.out.println(transaction);
             }
         }
     }
-
 
     void runAccountDetailLoop(BankAccount account) {
         int action = -1;
@@ -407,7 +414,6 @@ public class MainMenu {
             runAccountDetailLoop(selected);
         }
     }
-
 
     /**
      * Returns chosen account, or null if user chose back.
@@ -517,13 +523,15 @@ public class MainMenu {
 
     public void runAdministratorFlow() {
         int top = -1;
-        while (top != ADMIN_BACK_TO_ROLE) {
+        while (top != ADMIN_BACK_TO_LOGIN) {
             displayAdministratorTopMenu();
             top = getUserSelection(MAX_ADMIN_TOP_SELECTION);
             if (top == ADMIN_CHOOSE_ACCOUNT) {
                 runAdminAccountSelectionLoop();
             } else if (top == ADMIN_REVIEW_PENDING_TRANSFERS) {
                 runPendingLargeTransfersReview();
+            } else if (top == ADMIN_REVIEW_ACCOUNT_LIST) {
+                // runPrintAccountsFromFile();
             }
         }
     }
@@ -540,7 +548,82 @@ public class MainMenu {
         }
     }
 
-    public void runCustomerFlow() {
+
+
+    // feature: customer sign up
+
+    private List<BankAccount> readAccountsFromFile() {
+        File file = new File(ACCOUNTS_FILE);
+        if (!file.exists() || file.length() == 0) return new ArrayList<>();
+        Type listType = new TypeToken<List<BankAccount>>(){}.getType();
+        try (FileReader reader = new FileReader(file)) {
+            List<BankAccount> result = new Gson().fromJson(reader, listType);
+            return result != null ? result : new ArrayList<>();
+        } catch (IOException e) {
+            System.out.println("Error reading accounts file.");
+            return new ArrayList<>();
+        }
+    }
+
+    private void writeAccountsToFile(List<BankAccount> list) {
+        try (FileWriter writer = new FileWriter(ACCOUNTS_FILE)) {
+            new GsonBuilder().setPrettyPrinting().create().toJson(list, writer);
+        } catch (IOException e) {
+            System.out.println("Error writing accounts file.");
+        }
+    }
+
+    private boolean isUsernameTaken(String username, List<BankAccount> stored) {
+        for (BankAccount acc : stored) {
+            if (username.equals(acc.getAccountName())) return true;
+        }
+        return false;
+    }
+
+    public boolean recordNewAccount(BankAccount newAccount) {
+        List<BankAccount> stored = readAccountsFromFile();
+        if (isUsernameTaken(newAccount.getAccountName(), stored)) {
+            System.out.println("This username already exists. Try again with a different username.");
+            return false;
+        }
+        stored.add(newAccount);
+        writeAccountsToFile(stored);
+        accounts.add(newAccount);
+        return true;
+    }
+
+    public void runCustomerSignUpFlow() {
+        System.out.println();
+        System.out.println("Create a username: ");
+        String newAccountUsername = keyboardInput.next();
+        System.out.println("Create a password: ");
+        String newAccountPassword = keyboardInput.next();
+        BankAccount newAccount = new BankAccount(newAccountUsername, newAccountPassword);
+        newAccount.setLoggedIn(true);
+        boolean created = recordNewAccount(newAccount);
+        if (created) {
+            System.out.println("Your new account (" + newAccountUsername + ") has been created. Automatically logging you in.");
+            runAccountDetailLoop(newAccount);
+        } else {
+            run();
+        }
+    }
+
+
+    public void initializeAccountsArrayList() {
+        accounts.clear();
+        for (BankAccount acc : readAccountsFromFile()) {
+            if (!acc.getAccountName().equals("defaultaccount")) {
+                accounts.add(acc);
+            }
+        }
+        writeAccountsToFile(accounts);
+    }
+
+
+
+    // TODO: adapt from previous runCustomerFlow()
+    public void runLogInFlow() {
         int selection = -1;
         while (selection != CUSTOMER_EXIT_TO_ROLE) {
             displayCustomerMainMenu();
@@ -550,7 +633,7 @@ public class MainMenu {
                     runSelectAccountFlow();
                     break;
                 case CUSTOMER_OPEN_ACCOUNT:
-                    performCreateAccount();
+                    // performCreateAccount();
                     break;
                 default:
                     break;
@@ -559,14 +642,19 @@ public class MainMenu {
     }
 
     public void run() {
-        int role = -1;
-        while (role != ROLE_EXIT) {
-            displayRoleSelection();
-            role = getUserSelection(MAX_ROLE_SELECTION);
-            if (role == ROLE_CUSTOMER) {
-                runCustomerFlow();
-            } else if (role == ROLE_ADMINISTRATOR) {
+        initializeAccountsArrayList();
+        int accountAccessMethod = -1;
+        while (accountAccessMethod != ACCOUNT_AUTH_EXIT) {
+            displayAuthModeSelection();
+            accountAccessMethod = getUserSelection(MAX_AUTH_SELECTION);
+            if (accountAccessMethod == ACCOUNT_AUTH_LOGIN) {
+                // runCustomerFlow(); 
                 runAdministratorFlow();
+                // runLogInFlow(); //TODO
+            } else if (accountAccessMethod == ACCOUNT_AUTH_SIGNUP) {
+                // runAdministratorFlow();
+                runCustomerSignUpFlow();
+                return;
             }
         }
         System.out.println();
