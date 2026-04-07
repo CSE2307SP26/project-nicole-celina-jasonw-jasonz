@@ -208,6 +208,10 @@ public class MainMenu {
     }
 
     public void performDeposit(BankAccount account) {
+        if (account.isFrozen()) {
+            System.out.println("This account is frozen. Deposits are not allowed.");
+            return;
+        }
         double depositAmount = promptNonNegativeAmount("How much would you like to deposit: ");
         if (depositAmount == 0) {
             System.out.println("No deposit made.");
@@ -225,6 +229,10 @@ public class MainMenu {
     }
 
     public void performWithdrawal(BankAccount account) {
+        if (account.isFrozen()) {
+            System.out.println("This account is frozen. Withdrawals are not allowed.");
+            return;
+        }
         double withdrawalAmount = promptNonNegativeAmount("How much would you like to withdraw: ");
 
         if (withdrawalAmount == 0) {
@@ -274,6 +282,10 @@ public class MainMenu {
         }
         if (targetAccount.isFrozen()) {
             System.out.println("The destination account is frozen. Transfers are not allowed.");
+            return;
+        }
+        if (account.getBalance() < transferAmount) {
+            System.out.println("Insufficient balance.");
             return;
         }
         if (transferAmount > LARGE_TRANSFER_THRESHOLD) {
