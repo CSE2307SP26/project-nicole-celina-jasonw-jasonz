@@ -494,4 +494,58 @@ public class BankAccountTest {
             assertTrue(output.contains("No registered accounts found."));
         }
     }
+    // runCustomerLogInFlow tests
+        @Test
+        void testAuthenticateCustomerSuccess() {
+            MainMenu menu = new MainMenu("test_accounts.json");
+            BankAccount acc = new BankAccount("alice", "1234");
+            menu.getAccounts().clear();
+            menu.getAccounts().add(acc);
+
+            BankAccount result = menu.authenticateCustomerLogin("alice", "1234");
+            assertEquals(acc, result);
+        }
+
+        @Test
+        void testAuthenticateCustomerWrongPassword() {
+            MainMenu menu = new MainMenu("test_accounts.json");
+            BankAccount acc = new BankAccount("alice", "1234");
+            menu.getAccounts().clear();
+            menu.getAccounts().add(acc);
+
+            BankAccount result = menu.authenticateCustomerLogin("alice", "123");
+            assertEquals(null, result);
+        }
+
+        @Test
+        void testAuthenticateCustomerWrongUsername() {
+            MainMenu menu = new MainMenu("test_accounts.json");
+            BankAccount acc = new BankAccount("alice", "1234");
+            menu.getAccounts().clear();
+            menu.getAccounts().add(acc);
+
+            BankAccount result = menu.authenticateCustomerLogin("bob", "1234");
+            assertEquals(null, result);
+        }
+        @Test
+        void testAuthenticateCustomerNoAccounts() {
+            MainMenu menu = new MainMenu("test_accounts.json");
+            menu.getAccounts().clear();
+
+            BankAccount result = menu.authenticateCustomerLogin("alice", "1234");
+            assertEquals(null, result);
+        }
+        @Test
+        void testAuthenticateCustomerMultipleAccounts() {
+            MainMenu menu = new MainMenu("test_accounts.json");
+            BankAccount acc1 = new BankAccount("alice", "1234");
+            BankAccount acc2 = new BankAccount("bob", "5678");
+            menu.getAccounts().clear();
+            menu.getAccounts().add(acc1);
+            menu.getAccounts().add(acc2);
+            BankAccount result1 = menu.authenticateCustomerLogin("alice", "1234");
+            assertEquals(acc1, result1);
+            BankAccount result2 = menu.authenticateCustomerLogin("bob", "5678");
+            assertEquals(acc2, result2);
+        }
 }

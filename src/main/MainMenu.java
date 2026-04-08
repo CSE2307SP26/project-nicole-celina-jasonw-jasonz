@@ -19,10 +19,11 @@ import java.lang.reflect.Type;
 
 public class MainMenu {
 
-    private static final int ACCOUNT_AUTH_LOGIN = 1;
-    private static final int ACCOUNT_AUTH_SIGNUP = 2;
-    private static final int ACCOUNT_AUTH_EXIT = 3;
-    private static final int MAX_AUTH_SELECTION = 3;
+    private static final int ACCOUNT_CUSTOMER_LOGIN = 1;
+    private static final int ACCOUNT_CUSTOMER_SIGNUP = 2;
+    private static final int ACCOUNT_ADMIN_LOGIN = 3;
+    private static final int ACCOUNT_AUTH_EXIT = 4;
+    private static final int MAX_AUTH_SELECTION = 4;
 
     private static final int CUSTOMER_SELECT_ACCOUNT = 1;
     private static final int CUSTOMER_OPEN_ACCOUNT = 2;
@@ -99,11 +100,13 @@ public class MainMenu {
         System.out.println();
         System.out.println("Welcome to the 237 Bank App!");
         System.out.println("Do you have an account with us?");
-        System.out.println("1. Log in (customer / admin)");
+        System.out.println("1. Log in as customer");
         System.out.println("2. Sign up for a customer account");
-        System.out.println("3. Exit the app");
+        System.out.println("3. Log in as administrator");
+        System.out.println("4. Exit the app");
     }
 
+    //Placeholder interface: no longer implemented due to authentication now being required for customers.
     public void displayCustomerMainMenu() {
         System.out.println();
         System.out.println("--- Customer ---");
@@ -130,6 +133,7 @@ public class MainMenu {
                 keyboardInput.next();
             }
             selection = keyboardInput.nextInt();
+            keyboardInput.nextLine();
         }
         return selection;
     }
@@ -256,10 +260,8 @@ public class MainMenu {
 
     public void performCloseAccount(BankAccount account, boolean isTesting) {
         accounts.remove(account);
+        writeAccountsToFile(accounts);
         System.out.println("Account [" + account.getAccountName() + "] is closed. Taking you back to the main menu.");
-        if (!isTesting) {
-            // runCustomerFlow();
-        }
     }
 
     public void performTransferWithdraw(BankAccount account) {
@@ -414,7 +416,7 @@ public class MainMenu {
                     break;
                 case ACCT_DETAIL_CLOSE_ACCOUNT:
                     performCloseAccount(account, false);
-                    break;
+                    return;
                 default:
                     break;
             }
@@ -654,6 +656,7 @@ public class MainMenu {
     }
 
     // TODO: adapt from previous runCustomerFlow()
+    /**
     public void runLogInFlow() {
         int selection = -1;
         while (selection != CUSTOMER_EXIT_TO_ROLE) {
@@ -670,6 +673,32 @@ public class MainMenu {
                     break;
             }
         }
+    } */
+
+    // feature: customer login (existing account)
+    public BankAccount authenticateCustomerLogin(String username, String password) {
+        for (BankAccount acc : accounts) {
+            if (acc.getAccountName().equals(username) && acc.getAccountPassword().equals(password)) {
+                return acc;
+            }
+        }
+        return null;
+    }
+
+    public void runCustomerLogInFlow() {
+        System.out.println();
+        System.out.println("Enter your username: ");
+        String username = keyboardInput.next();
+        System.out.println("Enter your password: ");
+        String password = keyboardInput.next();
+        BankAccount account = authenticateCustomerLogin(username, password);
+        if (account == null) {
+            System.out.println("Invalid username or password. Returning to main menu.");
+            return;
+        }
+        account.setLoggedIn(true);
+        System.out.println("Login successful. Welcome back, " + account.getAccountName() + "!");
+        runAccountDetailLoop(account);
     }
 
     public void run() {
@@ -678,14 +707,14 @@ public class MainMenu {
         while (accountAccessMethod != ACCOUNT_AUTH_EXIT) {
             displayAuthModeSelection();
             accountAccessMethod = getUserSelection(MAX_AUTH_SELECTION);
-            if (accountAccessMethod == ACCOUNT_AUTH_LOGIN) {
-                // runCustomerFlow(); 
-                runAdministratorFlow();
-                // runLogInFlow(); //TODO
-            } else if (accountAccessMethod == ACCOUNT_AUTH_SIGNUP) {
-                // runAdministratorFlow();
+            if (accountAccessMethod == ACCOUNT_CUSTOMER_LOGIN) {
+                runCustomerLogInFlow();
+            } else if (accountAccessMethod == ACCOUNT_CUSTOMER_SIGNUP) {
                 runCustomerSignUpFlow();
-                return;
+            } else if (accountAccessMethod == ACCOUNT_ADMIN_LOGIN) {
+                runAdministratorFlow();
+            } else if (accountAccessMethod == ACCOUNT_AUTH_EXIT) {
+                // exit loop and end program
             }
         }
         System.out.println();
