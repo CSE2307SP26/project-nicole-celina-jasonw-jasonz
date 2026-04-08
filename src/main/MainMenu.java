@@ -16,7 +16,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Type;
 
-
 public class MainMenu {
 
     private static final int ACCOUNT_CUSTOMER_LOGIN = 1;
@@ -42,8 +41,9 @@ public class MainMenu {
     private static final int ADMIN_CHOOSE_ACCOUNT = 1;
     private static final int ADMIN_REVIEW_PENDING_TRANSFERS = 2;
     private static final int ADMIN_REVIEW_ACCOUNT_LIST = 3;
-    private static final int ADMIN_BACK_TO_LOGIN = 4;
-    private static final int MAX_ADMIN_TOP_SELECTION = 4;
+    private static final int ADMIN_DELETE_ACCOUNT = 4;
+    private static final int ADMIN_BACK_TO_LOGIN = 5;
+    private static final int MAX_ADMIN_TOP_SELECTION = 5;
 
     /**
      * Transfers above this amount require administrator approval before funds
@@ -121,7 +121,8 @@ public class MainMenu {
         System.out.println("1. Select account to manage");
         System.out.println("2. Review pending large transfers");
         System.out.println("3. View account login info");
-        System.out.println("4. Log out");
+        System.out.println("4. Delete an account");
+        System.out.println("5. Log out");
     }
 
     public int getUserSelection(int max) {
@@ -551,6 +552,10 @@ public class MainMenu {
                 runPendingLargeTransfersReview();
             } else if (top == ADMIN_REVIEW_ACCOUNT_LIST) {
                 runPrintAccountsFromFile();
+            } else if (top == ADMIN_DELETE_ACCOUNT) {
+                runAdminDeleteAccountFlow();
+            } else if (top == ADMIN_BACK_TO_LOGIN) {
+                // loop will exit and return to main menu
             }
         }
     }
@@ -566,7 +571,6 @@ public class MainMenu {
             }
         }
     }
-
 
 
     // feature: customer sign up
@@ -627,7 +631,6 @@ public class MainMenu {
             run();
         }
     }
-
 
     public void initializeAccountsArrayList() {
         List<BankAccount> persisted = readAccountsFromFile();
@@ -699,6 +702,37 @@ public class MainMenu {
         account.setLoggedIn(true);
         System.out.println("Login successful. Welcome back, " + account.getAccountName() + "!");
         runAccountDetailLoop(account);
+    }
+
+    // feature: admin can delete accounts that have no unresolved pending transfers
+    public void runAdminDeleteAccount(BankAccount account) {
+        for (PendingLargeTransfer p : pendingLargeTransfers) {
+            if (p.from == account || p.to == account) {
+                System.out.println("Cannot delete this account: large transfer request unresolved.");
+                return;
+            }
+        }
+        accounts.remove(account);
+        writeAccountsToFile(accounts);
+        System.out.println("Account [" + account.getAccountName() + "] is deleted.");
+    }
+
+    public void runAdminDeleteAccountFlow() {
+        runPrintAccountsFromFile();
+        System.out.println("Select the account to delete by username: ");
+        String account = keyboardInput.next();
+        BankAccount toDelete = null;
+        for (BankAccount acc: accounts) {
+            if (acc.getAccountName().equals(account)) {
+                toDelete = acc;
+                break;
+            }
+        }
+        if (toDelete != null) {
+            runAdminDeleteAccount(toDelete);
+        } else {
+            System.out.println("Account not found.");
+        }
     }
 
     public void run() {

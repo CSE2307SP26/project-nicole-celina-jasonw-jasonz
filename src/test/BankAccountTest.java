@@ -2,6 +2,8 @@ package test;
 
 import main.BankAccount;
 import main.MainMenu;
+
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
@@ -53,7 +55,6 @@ public class BankAccountTest {
         }
     }
 
-
     @Test
     public void testInvalidDeposit() {
         BankAccount testAccount = new BankAccount();
@@ -104,7 +105,6 @@ public class BankAccountTest {
             //do nothing, test passes
         }
     }
-
 
     // customer test: close account
 
@@ -495,57 +495,92 @@ public class BankAccountTest {
         }
     }
     // runCustomerLogInFlow tests
-        @Test
-        void testAuthenticateCustomerSuccess() {
-            MainMenu menu = new MainMenu("test_accounts.json");
-            BankAccount acc = new BankAccount("alice", "1234");
-            menu.getAccounts().clear();
-            menu.getAccounts().add(acc);
+     @Test
+    void testAuthenticateCustomerSuccess() {
+        MainMenu menu = new MainMenu("test_accounts.json");
+        BankAccount acc = new BankAccount("alice", "1234");
+        menu.getAccounts().clear();
+        menu.getAccounts().add(acc);
 
-            BankAccount result = menu.authenticateCustomerLogin("alice", "1234");
-            assertEquals(acc, result);
-        }
+        BankAccount result = menu.authenticateCustomerLogin("alice", "1234");
+        assertEquals(acc, result);
+    }
 
-        @Test
-        void testAuthenticateCustomerWrongPassword() {
-            MainMenu menu = new MainMenu("test_accounts.json");
-            BankAccount acc = new BankAccount("alice", "1234");
-            menu.getAccounts().clear();
-            menu.getAccounts().add(acc);
+    @Test
+    void testAuthenticateCustomerWrongPassword() {
+        MainMenu menu = new MainMenu("test_accounts.json");
+        BankAccount acc = new BankAccount("alice", "1234");
+        menu.getAccounts().clear();
+        menu.getAccounts().add(acc);
 
-            BankAccount result = menu.authenticateCustomerLogin("alice", "123");
-            assertEquals(null, result);
-        }
+        BankAccount result = menu.authenticateCustomerLogin("alice", "123");
+        assertEquals(null, result);
+    }
 
-        @Test
-        void testAuthenticateCustomerWrongUsername() {
-            MainMenu menu = new MainMenu("test_accounts.json");
-            BankAccount acc = new BankAccount("alice", "1234");
-            menu.getAccounts().clear();
-            menu.getAccounts().add(acc);
+    @Test
+    void testAuthenticateCustomerWrongUsername() {
+        MainMenu menu = new MainMenu("test_accounts.json");
+        BankAccount acc = new BankAccount("alice", "1234");
+        menu.getAccounts().clear();
+        menu.getAccounts().add(acc);
 
-            BankAccount result = menu.authenticateCustomerLogin("bob", "1234");
-            assertEquals(null, result);
-        }
-        @Test
-        void testAuthenticateCustomerNoAccounts() {
-            MainMenu menu = new MainMenu("test_accounts.json");
-            menu.getAccounts().clear();
+        BankAccount result = menu.authenticateCustomerLogin("bob", "1234");
+        assertEquals(null, result);
+    }
+    @Test
+    void testAuthenticateCustomerNoAccounts() {
+        MainMenu menu = new MainMenu("test_accounts.json");
+        menu.getAccounts().clear();
 
-            BankAccount result = menu.authenticateCustomerLogin("alice", "1234");
-            assertEquals(null, result);
-        }
-        @Test
-        void testAuthenticateCustomerMultipleAccounts() {
-            MainMenu menu = new MainMenu("test_accounts.json");
-            BankAccount acc1 = new BankAccount("alice", "1234");
-            BankAccount acc2 = new BankAccount("bob", "5678");
-            menu.getAccounts().clear();
-            menu.getAccounts().add(acc1);
-            menu.getAccounts().add(acc2);
-            BankAccount result1 = menu.authenticateCustomerLogin("alice", "1234");
-            assertEquals(acc1, result1);
-            BankAccount result2 = menu.authenticateCustomerLogin("bob", "5678");
-            assertEquals(acc2, result2);
-        }
+        BankAccount result = menu.authenticateCustomerLogin("alice", "1234");
+        assertEquals(null, result);
+    }
+    @Test
+    void testAuthenticateCustomerMultipleAccounts() {
+        MainMenu menu = new MainMenu("test_accounts.json");
+        BankAccount acc1 = new BankAccount("alice", "1234");
+        BankAccount acc2 = new BankAccount("bob", "5678");
+        menu.getAccounts().clear();
+        menu.getAccounts().add(acc1);
+        menu.getAccounts().add(acc2);
+        BankAccount result1 = menu.authenticateCustomerLogin("alice", "1234");
+        assertEquals(acc1, result1);
+        BankAccount result2 = menu.authenticateCustomerLogin("bob", "5678");
+        assertEquals(acc2, result2);
+    }
+    // Admin delete account tests
+    @Test
+    void testAdminDeleteAccountValidRemoval() {
+        MainMenu menu = new MainMenu("test_accounts.json");
+        BankAccount acc1 = new BankAccount("alice", "1234");
+        BankAccount acc2 = new BankAccount("bob", "5678");
+        menu.getAccounts().clear();
+        menu.getAccounts().add(acc1);
+        menu.getAccounts().add(acc2);
+
+        menu.runAdminDeleteAccount(acc1);
+        assertFalse(menu.getAccounts().contains(acc1));
+        assertTrue(menu.getAccounts().contains(acc2));
+    }
+    @Test
+    void testAdminDeleteAccountNonexistentAccount() {
+        MainMenu menu = new MainMenu("test_accounts.json");
+        BankAccount acc1 = new BankAccount("alice", "1234");
+        BankAccount acc2 = new BankAccount("bob", "5678");
+        menu.getAccounts().clear();
+        menu.getAccounts().add(acc1);
+
+        menu.runAdminDeleteAccount(acc2);
+        assertTrue(menu.getAccounts().contains(acc1));
+        assertFalse(menu.getAccounts().contains(acc2));
+    }
+    @Test
+    void testAdminDeleteAccountEmptyAccountList() {
+        MainMenu menu = new MainMenu("test_accounts.json");
+        menu.getAccounts().clear();
+
+        BankAccount acc = new BankAccount("alice", "1234");
+        menu.runAdminDeleteAccount(acc);
+        assertFalse(menu.getAccounts().contains(acc));
+    }
 }
