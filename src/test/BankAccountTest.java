@@ -626,4 +626,61 @@ public class BankAccountTest {
         menu.runAdminDeleteAccount(acc);
         assertFalse(menu.getAccounts().contains(acc));
     }
+
+    //admin login
+    @Test
+    public void testAdminSetupGetsRecorded() {
+        MainMenu menu = new MainMenu("test_admin.json");
+        menu.recordAdminSetup("password", "blue", "cat");
+        assertTrue(menu.checkAdminPassword("password"));
+    }
+
+    @Test
+    public void testAdminPasswordCorrect() {
+        MainMenu menu = new MainMenu("test_admin.json");
+        menu.recordAdminSetup("password", "blue", "cat");
+        boolean loginResult = menu.checkAdminPassword("password");
+        assertTrue(loginResult);
+    }
+
+    @Test
+    public void testAdminPasswordWrong() {
+        MainMenu menu = new MainMenu("test_admin.json");
+        menu.recordAdminSetup("password", "blue", "cat");
+        boolean loginResult = menu.checkAdminPassword("wrongpassword");
+        assertFalse(loginResult);
+    }
+
+    @Test
+    public void testColorQuestionMatches() {
+        MainMenu menu = new MainMenu("test_admin.json");
+        menu.recordAdminSetup("password", "blue", "cat");
+        boolean loginResult = menu.checkAdminAnswer("What is your favorite color?", "BLUE");
+        assertTrue(loginResult);
+    }
+
+    @Test
+    public void testAnimalQuestionMatches() {
+        MainMenu menu = new MainMenu("test_admin.json");
+        menu.recordAdminSetup("password", "blue", "cat");
+        boolean loginResult = menu.checkAdminAnswer("What is your favorite animal?", "cAt");
+        assertTrue(loginResult);
+    }
+
+    @Test
+    public void testWrongAnswerLoginFails() {
+        MainMenu menu = new MainMenu("test_admin.json");
+        menu.recordAdminSetup("password", "blue", "cat");
+        boolean loginResult = menu.checkAdminAnswer("What is your favorite color?", "red");
+        assertFalse(loginResult);
+    }
+
+    @Test
+    public void testAdminLoginSetupPersistsAcrossSessions() {
+        MainMenu menu1 = new MainMenu("Test_admin.json");
+        menu1.recordAdminSetup("password", "blue", "cat");
+        MainMenu menu2 = new MainMenu("Test_admin.json");
+        boolean passwordMatchesAcrossSession = menu2.checkAdminPassword("password");
+        assertTrue(passwordMatchesAcrossSession);
+    }
 }

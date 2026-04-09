@@ -59,8 +59,12 @@ public class MainMenu {
     private static final int ADMIN_ACT_BACK_TO_LIST = 5;
     private static final int MAX_ADMIN_ACTION_SELECTION = 5;
 
+    private static final String ADMIN_QUESTION_COLOR = "What is your favorite color?";
+    private static final String ADMIN_QUESTION_ANIMAL = "What is your favorite animal?";
+
     private final List<BankAccount> accounts;
     private final String accountsFile;
+    private final String adminFile;
     private final List<PendingLargeTransfer> pendingLargeTransfers;
     private final Scanner keyboardInput;
 
@@ -77,12 +81,25 @@ public class MainMenu {
         }
     }
 
+    public static class AdminLoginInfo {
+        public String adminPassword;
+        public String favoriteColorAnswer;
+        public String favoriteAnimalAnswer;
+        
+        public AdminLoginInfo(String adminPassword, String favoriteColorAnswer, String favoriteAnimalAnswer) {
+            this.adminPassword = adminPassword;
+            this.favoriteColorAnswer = favoriteColorAnswer;
+            this.favoriteAnimalAnswer = favoriteAnimalAnswer;
+        }
+    }
+
     public MainMenu() {
         this("accounts.json");
     }
 
     public MainMenu(String accountsFile) {
         this.accountsFile = accountsFile;
+        this.adminFile = "admin_" + accountsFile;
         this.accounts = new ArrayList<>();
         this.pendingLargeTransfers = new ArrayList<>();
         this.keyboardInput = new Scanner(System.in);
@@ -631,6 +648,68 @@ public class MainMenu {
         }
     }
 
+    private AdminLoginInfo readAdminLoginInfoFromFile() {
+        File file = new File(adminFile);
+        if(!file.exists() || file.length() == 0) {
+            return null;
+        }
+        try (FileReader reader = new FileReader(file)) {
+            return new Gson().fromJson(reader, AdminLoginInfo.class);
+        }
+        catch (IOException e) {
+            System.out.println("Error reading admin account file.");
+            return null;
+        }
+    }
+
+    private void writeAdminLoginInfoToFile(AdminLoginInfo adminInfo) {
+        try (FileWriter writer = new FileWriter(adminFile)) {
+            new GsonBuilder().setPrettyPrinting().create().toJson(adminInfo, writer);
+        }
+        catch (IOException e) {
+            System.out.println("Error writing admin file.");
+        }
+    }
+
+    public void recordAdminSetup(String adminPassword, String favoriteColorAnswer, String favoriteAnimalAnswer) {
+        AdminLoginInfo adminInfo = new AdminLoginInfo(adminPassword, favoriteColorAnswer, favoriteAnimalAnswer);
+        writeAdminLoginInfoToFile(adminInfo);
+    }
+
+    public boolean checkAdminPassword(String adminPassword) {
+        AdminLoginInfo adminInfo = readAdminLoginInfoFromFile();
+        if(adminInfo == null) {
+            return false;
+        }
+        return adminInfo.adminPassword.equals(adminPassword);
+    }
+
+    public boolean checkAdminAnswer(String question, String answer) {
+        AdminLoginInfo adminInfo = readAdminLoginInfoFromFile();
+        if(adminInfo == null) {
+            return false;
+        }
+        if(question.equals(ADMIN_QUESTION_COLOR)) {
+            return adminInfo.favoriteColorAnswer.equalsIgnoreCase(answer);
+        }
+        if(question.equals(ADMIN_QUESTION_ANIMAL)) {
+            return adminInfo.favoriteAnimalAnswer.equalsIgnoreCase(answer);
+        }
+        return false;
+    }
+
+    public boolean adminSetupExists() {
+        return readAdminLoginInfoFromFile() != null;
+    }
+
+    public String getRandomAdminQuestion() {
+        int questionNumber = (int)(Math.random() * 2);
+        if(questionNumber == 0) {
+            return ADMIN_QUESTION_COLOR;
+        }
+        return ADMIN_QUESTION_ANIMAL;
+    }
+
     private boolean isUsernameTaken(String username, List<BankAccount> stored) {
         for (BankAccount acc : stored) {
             if (username.equals(acc.getAccountName())) return true;
@@ -665,6 +744,47 @@ public class MainMenu {
         } else {
             run();
         }
+    }
+
+    public void runAdminSetupFlow() {
+        System.out.println();
+        System.out.println("Detected first time login. Create your administrator password: ");
+        String adminPassword = keyboardInput.next();
+        System.out.println("You will answer two security questions. One of them will be asked when you login.");
+        System.out.println(ADMIN_QUESTION_COLOR);
+        String favoriteColorAnswer = keyboardInput.next();
+        System.out.println(ADMIN_QUESTION_ANIMAL);
+        String favoriteAnimalAnswer = keyboardInput.next();
+        if(adminPassword.isEmpty() || favoriteColorAnswer.isEmpty() || favoriteAnimalAnswer.isEmpty()) {
+            System.out.println("Password and answer cannot be empty.");
+            return;
+        }
+        recordAdminSetup(adminPassword, favoriteColorAnswer, favoriteAnimalAnswer);
+        System.out.println("Administrator login setup is completed.");
+    }
+
+    public void runAdminLoginFlow() {
+        if(!adminSetupExists()) {
+            runAdminSetupFlow();
+            return;
+        }
+        System.out.println();
+        System.out.println("Enter administrator password: ");
+        String adminPassword = keyboardInput.next();
+
+        if(!checkAdminPassword(adminPassword)) {
+            System.out.println("Incorrect password. Returning to menu.");
+            return;
+        }
+        String question = getRandomAdminQuestion();
+        System.out.println(question);
+        String answer = keyboardInput.next();
+        if(!checkAdminAnswer(question, answer)) {
+            System.out.println("Incorrect answer to security question. Returning to menu.");
+            return;
+        }
+        System.out.println("Administrator login successful.");
+        runAdministratorFlow();
     }
 
     public void initializeAccountsArrayList() {
@@ -781,7 +901,7 @@ public class MainMenu {
             } else if (accountAccessMethod == ACCOUNT_CUSTOMER_SIGNUP) {
                 runCustomerSignUpFlow();
             } else if (accountAccessMethod == ACCOUNT_ADMIN_LOGIN) {
-                runAdministratorFlow();
+                runAdminLoginFlow();
             } else if (accountAccessMethod == ACCOUNT_AUTH_EXIT) {
                 // exit loop and end program
             }
