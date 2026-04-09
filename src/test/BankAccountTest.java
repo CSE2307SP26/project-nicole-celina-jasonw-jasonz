@@ -2,10 +2,24 @@ package test;
 
 import main.BankAccount;
 import main.MainMenu;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.PrintStream;
+import java.nio.file.Path;
 import java.util.List;
+
+import static org.junit.Assert.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 public class BankAccountTest {
 
@@ -17,6 +31,31 @@ public class BankAccountTest {
         assertEquals(50, testAccount.getBalance(), 0.01);
     }
 
+    @Test
+    public void testDepositOnFrozenAccountFails() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.deposit(50);
+        testAccount.setFrozen(true);
+        try {
+            testAccount.deposit(10);
+            fail();
+        } catch (IllegalStateException e) {
+            assertEquals(50, testAccount.getBalance(), 0.01);
+        }
+    }
+
+    @Test
+    public void testWithdrawOnFrozenAccountFails() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.deposit(50);
+        testAccount.setFrozen(true);
+        try {
+            testAccount.withdraw(10);
+            fail();
+        } catch (IllegalStateException e) {
+            assertEquals(50, testAccount.getBalance(), 0.01);
+        }
+    }
 
     @Test
     public void testInvalidDeposit() {
@@ -69,13 +108,12 @@ public class BankAccountTest {
         }
     }
 
-
     // customer test: close account
 
     @Test
     public void testValidAccountClosing() {
         MainMenu menu = new MainMenu();
-        BankAccount testAccount = new BankAccount("Test");
+        BankAccount testAccount = new BankAccount("Test", "testpassword");
         menu.getAccounts().add(testAccount);
         menu.performCloseAccount(testAccount, true);
         assertEquals(false, menu.getAccounts().contains(testAccount));
@@ -102,8 +140,8 @@ public class BankAccountTest {
     public void testTransferAmountZeroMakesNoChange() {
         TestMainMenu menu = new TestMainMenu();
 
-        BankAccount source = new BankAccount("Source");
-        BankAccount target = new BankAccount("Target");
+        BankAccount source = new BankAccount("Source", "testpassword");
+        BankAccount target = new BankAccount("Target", "testpassword");
 
         source.deposit(100);
         target.deposit(50);
@@ -124,8 +162,8 @@ public class BankAccountTest {
     public void testValidTransferMovesMoney() {
         TestMainMenu menu = new TestMainMenu();
 
-        BankAccount source = new BankAccount("Source");
-        BankAccount target = new BankAccount("Target");
+        BankAccount source = new BankAccount("Source", "testpassword");
+        BankAccount target = new BankAccount("Target", "testpassword");
 
         source.deposit(100);
         target.deposit(50);
@@ -144,11 +182,35 @@ public class BankAccountTest {
     }
 
     @Test
+    public void testLargeTransferIsQueuedNotExecuted() {
+        TestMainMenu menu = new TestMainMenu();
+
+        BankAccount source = new BankAccount("Source", "testpassword");
+        BankAccount target = new BankAccount("Target", "testpassword");
+
+        source.deposit(MainMenu.LARGE_TRANSFER_THRESHOLD + 1);
+        target.deposit(50);
+
+        menu.getAccounts().clear();
+        menu.getAccounts().add(source);
+        menu.getAccounts().add(target);
+
+        menu.testAmount = MainMenu.LARGE_TRANSFER_THRESHOLD + 1;
+        menu.testTargetIndex = 2;
+
+        menu.performTransferWithdraw(source);
+
+        assertEquals(1, menu.getPendingLargeTransferCount());
+        assertEquals(MainMenu.LARGE_TRANSFER_THRESHOLD + 1, source.getBalance(), 0.001);
+        assertEquals(50, target.getBalance(), 0.001);
+    }
+
+    @Test
     public void testTransferToSameAccountIsUndone() {
         TestMainMenu menu = new TestMainMenu();
 
-        BankAccount source = new BankAccount("Source");
-        BankAccount other = new BankAccount("Other");
+        BankAccount source = new BankAccount("Source", "testpassword");
+        BankAccount other = new BankAccount("Other", "testpassword");
 
         source.deposit(100);
         other.deposit(50);
@@ -169,13 +231,13 @@ public class BankAccountTest {
     //customer test: open account
     @Test
     public void testCreateAccountStoresInputName() {
-        BankAccount testAccount = new BankAccount("Savings");
+        BankAccount testAccount = new BankAccount("Savings", "testpassword");
         assertEquals("Savings", testAccount.getAccountName());
     }
 
     @Test
     public void testCreateAccountHasZeroBalance() {
-        BankAccount testAccount = new BankAccount("Savings");
+        BankAccount testAccount = new BankAccount("Savings", "testpassword");
         assertEquals(0, testAccount.getBalance(), 0.005);
     }
 
@@ -236,6 +298,47 @@ public class BankAccountTest {
         assertEquals("Withdraw: -30.0", transactionHistory.get(1));
         assertEquals("Transfer Out: -20.0", transactionHistory.get(2));
         assertEquals("Transfer In: 20.0", transactionHistory.get(3));
+    }
+
+    //debit card tests
+    @Test
+    public void testAccountStartsWithNoDebitCard() {
+        BankAccount testAccount = new BankAccount();
+        boolean hasDebitCard = testAccount.hasDebitCard();
+        assertFalse(hasDebitCard);
+    }
+
+    @Test
+    public void testCreateDebitCardStoresFirstName() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.createDebitCard("John", "Smith");
+        String firstName = testAccount.getDebitCardFirstName();
+        assertEquals("John", firstName);
+    }
+
+    @Test
+    public void testCreateDebitCardStoresLastName() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.createDebitCard("John", "Smith");
+        String lastName = testAccount.getDebitCardLastName();
+        assertEquals("Smith", lastName);
+    }
+
+    @Test
+    public void testCreateDebitCardMarksAccountHasCard() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.createDebitCard("John", "Smith");
+        boolean hasDebitCard = testAccount.hasDebitCard();
+        assertTrue(hasDebitCard);
+    }
+
+    @Test
+    public void testCreateDebitCardGeneratesCardNumber() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.createDebitCard("John", "Smith");
+        String cardNumber = testAccount.getDebitCardNumber();
+        assertNotNull(cardNumber);
+        assertFalse(cardNumber.isEmpty());
     }
 
     // admin tests
@@ -318,5 +421,266 @@ public class BankAccountTest {
         } catch (IllegalArgumentException e) {
             assertEquals(100, testAccount.getBalance(), 0.01);
         }
+    }
+
+    // features: customer sign up & print accounts 
+    @Nested
+    class SignUpTests {
+        @TempDir
+        Path tempDir;
+
+        private MainMenu makeMenu() {
+            return new MainMenu(tempDir.resolve("accounts.json").toString());
+        }
+
+        @Test
+        void testRecordNewAccountReturnsTrue() {
+            MainMenu menu = makeMenu();
+            assertTrue(menu.recordNewAccount(new BankAccount("alice", "pass")));
+        }
+
+        @Test
+        void testRecordNewAccountAddsToAccountsList() {
+            MainMenu menu = makeMenu();
+            BankAccount newAccount = new BankAccount("alice", "pass");
+            menu.recordNewAccount(newAccount);
+            assertTrue(menu.getAccounts().contains(newAccount));
+        }
+
+        @Test
+        void testRecordNewAccountDuplicateUsernameReturnsFalse() {
+            MainMenu menu = makeMenu();
+            menu.recordNewAccount(new BankAccount("alice", "pass1"));
+            assertFalse(menu.recordNewAccount(new BankAccount("alice", "pass2")));
+        }
+
+        @Test
+        void testRecordNewAccountDuplicateNotAddedToList() {
+            MainMenu menu = makeMenu();
+            menu.recordNewAccount(new BankAccount("alice", "pass1"));
+            int sizeBefore = menu.getAccounts().size();
+            menu.recordNewAccount(new BankAccount("alice", "pass2"));
+            assertEquals(sizeBefore, menu.getAccounts().size());
+        }
+
+        @Test
+        void testRecordNewAccountPersistedAcrossSessions() {
+            String file = tempDir.resolve("accounts.json").toString();
+            MainMenu menu1 = new MainMenu(file);
+            menu1.recordNewAccount(new BankAccount("alice", "pass"));
+            MainMenu menu2 = new MainMenu(file);
+            assertTrue(menu2.getAccounts().stream()
+                    .anyMatch(a -> a.getAccountName().equals("alice")));
+        }
+
+        @Test
+        void testInitializeAccountsLoadsAllPersistedAccounts() {
+            String file = tempDir.resolve("accounts.json").toString();
+            MainMenu menu1 = new MainMenu(file);
+            menu1.recordNewAccount(new BankAccount("bob", "pass"));
+            menu1.recordNewAccount(new BankAccount("carol", "pass"));
+            MainMenu menu2 = new MainMenu(file);
+            assertEquals(2, menu2.getAccounts().size());
+        }
+
+        @Test
+        void testInitializeSkipsDefaultAccount() {
+            String file = tempDir.resolve("accounts.json").toString();
+            MainMenu menu1 = new MainMenu(file);
+            menu1.recordNewAccount(new BankAccount("defaultaccount", "pass"));
+            MainMenu menu2 = new MainMenu(file);
+            assertFalse(menu2.getAccounts().stream()
+                    .anyMatch(a -> a.getAccountName().equals("defaultaccount")));
+        }
+
+        @Test
+        void testDuplicateDetectedFromFileNotJustMemory() {
+            String file = tempDir.resolve("accounts.json").toString();
+            MainMenu menu1 = new MainMenu(file);
+            menu1.recordNewAccount(new BankAccount("alice", "pass"));
+            MainMenu menu2 = new MainMenu(file);
+            assertFalse(menu2.recordNewAccount(new BankAccount("alice", "differentpass")));
+        }
+
+        // runPrintAccountsFromFile tests
+        private String captureOutput(Runnable action) {
+            ByteArrayOutputStream buf = new ByteArrayOutputStream();
+            PrintStream original = System.out;
+            System.setOut(new PrintStream(buf));
+            try { action.run(); } finally { System.setOut(original); }
+            return buf.toString();
+        }
+
+        @Test
+        void testPrintAccountsShowsUsernameAndPassword() {
+            MainMenu menu = makeMenu();
+            menu.recordNewAccount(new BankAccount("alice", "secret"));
+            String output = captureOutput(menu::runPrintAccountsFromFile);
+            assertTrue(output.contains("alice"));
+            assertTrue(output.contains("secret"));
+        }
+
+        @Test
+        void testPrintAccountsShowsAllAccounts() {
+            MainMenu menu = makeMenu();
+            menu.recordNewAccount(new BankAccount("alice", "pass1"));
+            menu.recordNewAccount(new BankAccount("bob", "pass2"));
+            String output = captureOutput(menu::runPrintAccountsFromFile);
+            assertTrue(output.contains("alice"));
+            assertTrue(output.contains("bob"));
+        }
+
+        @Test
+        void testPrintAccountsEmptyFileShowsNoAccountsMessage() {
+            MainMenu menu = makeMenu();
+            String output = captureOutput(menu::runPrintAccountsFromFile);
+            assertTrue(output.contains("No registered accounts found."));
+        }
+    }
+    // runCustomerLogInFlow tests
+     @Test
+    void testAuthenticateCustomerSuccess() {
+        MainMenu menu = new MainMenu("test_accounts.json");
+        BankAccount acc = new BankAccount("alice", "1234");
+        menu.getAccounts().clear();
+        menu.getAccounts().add(acc);
+
+        BankAccount result = menu.authenticateCustomerLogin("alice", "1234");
+        assertEquals(acc, result);
+    }
+
+    @Test
+    void testAuthenticateCustomerWrongPassword() {
+        MainMenu menu = new MainMenu("test_accounts.json");
+        BankAccount acc = new BankAccount("alice", "1234");
+        menu.getAccounts().clear();
+        menu.getAccounts().add(acc);
+
+        BankAccount result = menu.authenticateCustomerLogin("alice", "123");
+        assertEquals(null, result);
+    }
+
+    @Test
+    void testAuthenticateCustomerWrongUsername() {
+        MainMenu menu = new MainMenu("test_accounts.json");
+        BankAccount acc = new BankAccount("alice", "1234");
+        menu.getAccounts().clear();
+        menu.getAccounts().add(acc);
+
+        BankAccount result = menu.authenticateCustomerLogin("bob", "1234");
+        assertEquals(null, result);
+    }
+    @Test
+    void testAuthenticateCustomerNoAccounts() {
+        MainMenu menu = new MainMenu("test_accounts.json");
+        menu.getAccounts().clear();
+
+        BankAccount result = menu.authenticateCustomerLogin("alice", "1234");
+        assertEquals(null, result);
+    }
+    @Test
+    void testAuthenticateCustomerMultipleAccounts() {
+        MainMenu menu = new MainMenu("test_accounts.json");
+        BankAccount acc1 = new BankAccount("alice", "1234");
+        BankAccount acc2 = new BankAccount("bob", "5678");
+        menu.getAccounts().clear();
+        menu.getAccounts().add(acc1);
+        menu.getAccounts().add(acc2);
+        BankAccount result1 = menu.authenticateCustomerLogin("alice", "1234");
+        assertEquals(acc1, result1);
+        BankAccount result2 = menu.authenticateCustomerLogin("bob", "5678");
+        assertEquals(acc2, result2);
+    }
+    // Admin delete account tests
+    @Test
+    void testAdminDeleteAccountValidRemoval() {
+        MainMenu menu = new MainMenu("test_accounts.json");
+        BankAccount acc1 = new BankAccount("alice", "1234");
+        BankAccount acc2 = new BankAccount("bob", "5678");
+        menu.getAccounts().clear();
+        menu.getAccounts().add(acc1);
+        menu.getAccounts().add(acc2);
+
+        menu.runAdminDeleteAccount(acc1);
+        assertFalse(menu.getAccounts().contains(acc1));
+        assertTrue(menu.getAccounts().contains(acc2));
+    }
+    @Test
+    void testAdminDeleteAccountNonexistentAccount() {
+        MainMenu menu = new MainMenu("test_accounts.json");
+        BankAccount acc1 = new BankAccount("alice", "1234");
+        BankAccount acc2 = new BankAccount("bob", "5678");
+        menu.getAccounts().clear();
+        menu.getAccounts().add(acc1);
+
+        menu.runAdminDeleteAccount(acc2);
+        assertTrue(menu.getAccounts().contains(acc1));
+        assertFalse(menu.getAccounts().contains(acc2));
+    }
+    @Test
+    void testAdminDeleteAccountEmptyAccountList() {
+        MainMenu menu = new MainMenu("test_accounts.json");
+        menu.getAccounts().clear();
+
+        BankAccount acc = new BankAccount("alice", "1234");
+        menu.runAdminDeleteAccount(acc);
+        assertFalse(menu.getAccounts().contains(acc));
+    }
+
+    //admin login
+    @Test
+    public void testAdminSetupGetsRecorded() {
+        MainMenu menu = new MainMenu("test_admin.json");
+        menu.recordAdminSetup("password", "blue", "cat");
+        assertTrue(menu.checkAdminPassword("password"));
+    }
+
+    @Test
+    public void testAdminPasswordCorrect() {
+        MainMenu menu = new MainMenu("test_admin.json");
+        menu.recordAdminSetup("password", "blue", "cat");
+        boolean loginResult = menu.checkAdminPassword("password");
+        assertTrue(loginResult);
+    }
+
+    @Test
+    public void testAdminPasswordWrong() {
+        MainMenu menu = new MainMenu("test_admin.json");
+        menu.recordAdminSetup("password", "blue", "cat");
+        boolean loginResult = menu.checkAdminPassword("wrongpassword");
+        assertFalse(loginResult);
+    }
+
+    @Test
+    public void testColorQuestionMatches() {
+        MainMenu menu = new MainMenu("test_admin.json");
+        menu.recordAdminSetup("password", "blue", "cat");
+        boolean loginResult = menu.checkAdminAnswer("What is your favorite color?", "BLUE");
+        assertTrue(loginResult);
+    }
+
+    @Test
+    public void testAnimalQuestionMatches() {
+        MainMenu menu = new MainMenu("test_admin.json");
+        menu.recordAdminSetup("password", "blue", "cat");
+        boolean loginResult = menu.checkAdminAnswer("What is your favorite animal?", "cAt");
+        assertTrue(loginResult);
+    }
+
+    @Test
+    public void testWrongAnswerLoginFails() {
+        MainMenu menu = new MainMenu("test_admin.json");
+        menu.recordAdminSetup("password", "blue", "cat");
+        boolean loginResult = menu.checkAdminAnswer("What is your favorite color?", "red");
+        assertFalse(loginResult);
+    }
+
+    @Test
+    public void testAdminLoginSetupPersistsAcrossSessions() {
+        MainMenu menu1 = new MainMenu("Test_admin.json");
+        menu1.recordAdminSetup("password", "blue", "cat");
+        MainMenu menu2 = new MainMenu("Test_admin.json");
+        boolean passwordMatchesAcrossSession = menu2.checkAdminPassword("password");
+        assertTrue(passwordMatchesAcrossSession);
     }
 }
