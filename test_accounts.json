@@ -5,6 +5,10 @@
     "isLoggedIn": false,
     "balance": 0.0,
     "frozen": false,
-    "transactionHistory": []
+    "transactionHistory": [],
+    "hasDebitCard": false,
+    "debitCardFirstName": "",
+    "debitCardLastName": "",
+    "debitCardNumber": ""
   }
 ]

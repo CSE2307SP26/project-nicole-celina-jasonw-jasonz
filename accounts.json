@@ -5,6 +5,22 @@
     "isLoggedIn": true,
     "balance": 0.0,
     "frozen": false,
-    "transactionHistory": []
+    "transactionHistory": [],
+    "hasDebitCard": false,
+    "debitCardFirstName": "",
+    "debitCardLastName": "",
+    "debitCardNumber": ""
+  },
+  {
+    "accountName": "c",
+    "accountPassword": "cx",
+    "isLoggedIn": true,
+    "balance": 0.0,
+    "frozen": false,
+    "transactionHistory": [],
+    "hasDebitCard": false,
+    "debitCardFirstName": "",
+    "debitCardLastName": "",
+    "debitCardNumber": ""
   }
 ]

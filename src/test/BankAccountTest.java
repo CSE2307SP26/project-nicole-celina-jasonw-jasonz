@@ -9,6 +9,8 @@ import java.io.File;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.List;
+
+import static org.junit.Assert.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -296,6 +298,47 @@ public class BankAccountTest {
         assertEquals("Withdraw: -30.0", transactionHistory.get(1));
         assertEquals("Transfer Out: -20.0", transactionHistory.get(2));
         assertEquals("Transfer In: 20.0", transactionHistory.get(3));
+    }
+
+    //debit card tests
+    @Test
+    public void testAccountStartsWithNoDebitCard() {
+        BankAccount testAccount = new BankAccount();
+        boolean hasDebitCard = testAccount.hasDebitCard();
+        assertFalse(hasDebitCard);
+    }
+
+    @Test
+    public void testCreateDebitCardStoresFirstName() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.createDebitCard("John", "Smith");
+        String firstName = testAccount.getDebitCardFirstName();
+        assertEquals("John", firstName);
+    }
+
+    @Test
+    public void testCreateDebitCardStoresLastName() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.createDebitCard("John", "Smith");
+        String lastName = testAccount.getDebitCardLastName();
+        assertEquals("Smith", lastName);
+    }
+
+    @Test
+    public void testCreateDebitCardMarksAccountHasCard() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.createDebitCard("John", "Smith");
+        boolean hasDebitCard = testAccount.hasDebitCard();
+        assertTrue(hasDebitCard);
+    }
+
+    @Test
+    public void testCreateDebitCardGeneratesCardNumber() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.createDebitCard("John", "Smith");
+        String cardNumber = testAccount.getDebitCardNumber();
+        assertNotNull(cardNumber);
+        assertFalse(cardNumber.isEmpty());
     }
 
     // admin tests

@@ -34,9 +34,10 @@ public class MainMenu {
     private static final int ACCT_DETAIL_CHECK_BALANCE = 3;
     private static final int ACCT_DETAIL_TRANSFER = 4;
     private static final int ACCT_DETAIL_TRANSACTION_HISTORY = 5;
-    private static final int ACCT_DETAIL_CLOSE_ACCOUNT = 6;
-    private static final int ACCT_DETAIL_BACK = 7;
-    private static final int MAX_ACCOUNT_DETAIL_SELECTION = 7;
+    private static final int ACCT_DETAIL_DEBIT_CARD = 6;
+    private static final int ACCT_DETAIL_CLOSE_ACCOUNT = 7;
+    private static final int ACCT_DETAIL_BACK = 8;
+    private static final int MAX_ACCOUNT_DETAIL_SELECTION = 8;
 
     private static final int ADMIN_CHOOSE_ACCOUNT = 1;
     private static final int ADMIN_REVIEW_PENDING_TRANSFERS = 2;
@@ -208,8 +209,9 @@ public class MainMenu {
         System.out.println("3. Check balance");
         System.out.println("4. Transfer money");
         System.out.println("5. View transaction history");
-        System.out.println("6. Close this account");
-        System.out.println("7. Exit program");
+        System.out.println("6. View debit card");
+        System.out.println("7. Close this account");
+        System.out.println("8. Exit program");
     }
 
     public void performDeposit(BankAccount account) {
@@ -257,6 +259,36 @@ public class MainMenu {
 
     public void performCheckBalance(BankAccount account) {
         System.out.println("Current balance: " + account.getBalance());
+    }
+
+    public void performViewDebitCard(BankAccount account) {
+        if(account.hasDebitCard()) {
+            System.out.println("---Here's your debit card information---");
+            System.out.println("Cardholder name: " + account.getDebitCardFirstName() + " " + account.getDebitCardLastName());
+            System.out.println("Card number: " + account.getDebitCardNumber());
+            System.out.println("Linked bank account: " + account.getAccountName());
+            return;
+        }
+        System.out.println("This account currently does not have a debit card. You can choose to set one up.");
+        System.out.println("1. Set up debit card");
+        System.out.println("2. Back to account detail");
+        int userCreateDebitCardChoice = getUserSelection(2);
+        if(userCreateDebitCardChoice != 1) {
+            return;
+        }
+        System.out.print("Enter first name for the debit card: ");
+        String firstName = keyboardInput.nextLine().trim();
+        System.out.print("Enter last name for the debit card: ");
+        String lastName = keyboardInput.nextLine().trim();
+        if(firstName.isEmpty() || lastName.isEmpty()) {
+            System.out.println("First and last name cannot be empty.");
+            return;
+        }
+        account.createDebitCard(firstName, lastName);
+        System.out.println("---Your debit card has been set up---");
+        System.out.println("Cardholder name: " + account.getDebitCardFirstName() + " " + account.getDebitCardLastName());
+        System.out.println("Card number: " + account.getDebitCardNumber());
+        System.out.println("Linked bank account: " + account.getAccountName());
     }
 
     public void performCloseAccount(BankAccount account, boolean isTesting) {
@@ -414,6 +446,9 @@ public class MainMenu {
                     break;
                 case ACCT_DETAIL_TRANSACTION_HISTORY:
                     performViewTransactionHistory(account);
+                    break;
+                case ACCT_DETAIL_DEBIT_CARD:
+                    performViewDebitCard(account);
                     break;
                 case ACCT_DETAIL_CLOSE_ACCOUNT:
                     performCloseAccount(account, false);
