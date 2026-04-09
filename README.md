@@ -43,6 +43,7 @@ bash runApp.sh
 
 
 ## Top-Level Sitemap
+
 - Role Selection
   - Customer Login
   - Customer Signup
@@ -66,8 +67,6 @@ bash runApp.sh
   - Transfer money (large transfers may require administrator approval)
   - View transaction history
   - View debit card
-    - 1st time: link debit card - enter cardholder first name + last name; randomly generated card number
-    - already linked: show cardholder name, card number, and linked account name
   - Close account
 
 - Administrator Page
@@ -83,6 +82,8 @@ bash runApp.sh
     - Unfreeze account
 
 ## Sitemap as Tree
+
+```text
 Bank System
 ├── Role Selection
 │   ├── Customer
@@ -128,3 +129,4 @@ Bank System
             ├── Review Pending Large Transfers: accept / deny / cancel
             ├── View customer account login info
             └── Delete A Customer Account
+```
