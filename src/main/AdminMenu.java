@@ -178,10 +178,24 @@ class AdminMenu {
         int days = prompts.promptPositiveInt("Enter number of days to fast-forward: ");
         try {
             systemTime.advanceDays(days);
+            processDueLoansForAllAccounts();
             timeStorage.write(systemTime);
             System.out.println("Time advanced. Current day is now Day " + systemTime.getCurrentDay());
         } catch (IllegalArgumentException e) {
             System.out.println(e.getMessage());
+        }
+    }
+
+    private void processDueLoansForAllAccounts() {
+        boolean anyProcessed = false;
+        for (BankAccount acc : accounts) {
+            if (acc.processLoanIfDue(systemTime.getCurrentDay())) {
+                anyProcessed = true;
+            }
+        }
+        if (anyProcessed) {
+            persistAccounts();
+            System.out.println("Loan repayment processing completed for due accounts.");
         }
     }
 

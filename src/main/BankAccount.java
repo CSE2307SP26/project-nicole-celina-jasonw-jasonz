@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.ArrayList;
 
 public class BankAccount {
+    public static final double LOAN_FIXED_INTEREST_RATE = 0.05;
 
     private final String accountName;
     private String accountPassword;
@@ -16,6 +17,10 @@ public class BankAccount {
     private String debitCardFirstName;
     private String debitCardLastName;
     private String debitCardNumber;
+    private boolean hasActiveLoan;
+    private double activeLoanPrincipal;
+    private double activeLoanRepaymentAmount;
+    private int activeLoanDueDay;
 
     public BankAccount() {
         this("defaultaccount", "defaultpassword");
@@ -32,6 +37,10 @@ public class BankAccount {
         this.debitCardFirstName = "";
         this.debitCardLastName = "";
         this.debitCardNumber = "";
+        this.hasActiveLoan = false;
+        this.activeLoanPrincipal = 0;
+        this.activeLoanRepaymentAmount = 0;
+        this.activeLoanDueDay = 0;
     }
 
     public String getAccountName() {
@@ -128,6 +137,58 @@ public class BankAccount {
         this.debitCardLastName = lastName;
         this.debitCardNumber = generateDebitCardNumber();
         this.hasDebitCard = true;
+    }
+
+    public boolean hasActiveLoan() {
+        return hasActiveLoan;
+    }
+
+    public double getActiveLoanRepaymentAmount() {
+        return activeLoanRepaymentAmount;
+    }
+
+    public int getActiveLoanDueDay() {
+        return activeLoanDueDay;
+    }
+
+    public void applyLoan(double amount, int repaymentDays, int currentDay) {
+        if (amount <= 0 || repaymentDays <= 0) {
+            throw new IllegalArgumentException("Loan amount and repayment days must be positive.");
+        }
+        if (hasActiveLoan) {
+            throw new IllegalStateException("You already have an active loan.");
+        }
+        if (isFrozen()) {
+            throw new IllegalStateException("Account is frozen");
+        }
+        this.activeLoanPrincipal = amount;
+        this.activeLoanRepaymentAmount = amount * (1.0 + LOAN_FIXED_INTEREST_RATE);
+        this.activeLoanDueDay = currentDay + repaymentDays;
+        this.hasActiveLoan = true;
+        this.balance += amount;
+        recordTransaction("Loan Disbursed", amount);
+    }
+
+    public boolean processLoanIfDue(int currentDay) {
+        if (!hasActiveLoan || currentDay < activeLoanDueDay) {
+            return false;
+        }
+        if (balance >= activeLoanRepaymentAmount) {
+            balance -= activeLoanRepaymentAmount;
+            recordTransaction("Loan Repaid", -activeLoanRepaymentAmount);
+        } else {
+            setFrozen(true);
+            recordTransaction("Loan Default - Account Frozen", 0);
+        }
+        clearActiveLoan();
+        return true;
+    }
+
+    private void clearActiveLoan() {
+        this.hasActiveLoan = false;
+        this.activeLoanPrincipal = 0;
+        this.activeLoanRepaymentAmount = 0;
+        this.activeLoanDueDay = 0;
     }
 
     public void collectFee(double amount) {

@@ -119,7 +119,8 @@ Bank System
 17. A bank admin should be able to set up their login credentials (password and security questions) and log into their account using the correct password and answers. (Celina Xie)
 
 ## User stories Iteration 3
-18. Anyone should be able to fast-forward time to see how time-based elements (loans, fees, and investments) evolve over days.
+18. Anyone should be able to fast-forward time to see how time-based elements (loans, fees, and investments) evolve over days. (Jason Zhao)
+19. A bank customer should be able to apply for a fixed-interest loan that deducts the repayment amount from their account after a set number of days, and if the account lacks sufficient funds at that time, the account will be frozen. (Jason Zhao)
 
 
 
