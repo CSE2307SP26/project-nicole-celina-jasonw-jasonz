@@ -121,7 +121,15 @@ Bank System
 
 
 ## What user stories were completed this iteration?
-We completed all 8 user stories introduced in iteration 2, following the information architecture above. 
+
+## Iteration 3 implementation notes (codebase changes)
+
+- **OOP refactor / file organization**: split the previously large menu logic into `CustomerMenu` and `AdminMenu`, with `MainMenu` acting as a thin orchestrator.
+- **Data storage folder**: customer/admin data is stored under `data/accounts/` (auto-migrates legacy root JSON files on startup).
+- **Time system (Day 1 + fast-forward)**: the app tracks a global `SystemTime` starting at Day 1 (persisted to `data/accounts/system_time.json`). The current day is displayed at login, and both customer/admin can fast-forward by entering a number of days.
+- **Tests reorganized**: unit tests were split into multiple files for clarity (`BankAccountCoreTest`, `CustomerFlowTest`, `AdminFlowTest`).
+
+
 
 ## What user stories do you intend to complete next iteration?
 We will likely elaborate some details of the program based on real-life bank account functions and extend the program to non-bank functions (i.e. stock market) that would require customer and admin account information.

@@ -3,9 +3,12 @@
     "accountName": "www",
     "accountPassword": "www",
     "isLoggedIn": true,
-    "balance": 0.0,
+    "balance": 4.0,
     "frozen": false,
-    "transactionHistory": [],
+    "transactionHistory": [
+      "Transfer In: 1.0",
+      "Transfer In: 3.0"
+    ],
     "hasDebitCard": false,
     "debitCardFirstName": "",
     "debitCardLastName": "",
@@ -15,9 +18,11 @@
     "accountName": "c",
     "accountPassword": "cx",
     "isLoggedIn": true,
-    "balance": 0.0,
+    "balance": 2.0,
     "frozen": false,
-    "transactionHistory": [],
+    "transactionHistory": [
+      "Transfer In: 2.0"
+    ],
     "hasDebitCard": false,
     "debitCardFirstName": "",
     "debitCardLastName": "",

@@ -1,0 +1,14 @@
+[
+  {
+    "accountName": "jason",
+    "accountPassword": "zhao",
+    "isLoggedIn": true,
+    "balance": 0.0,
+    "frozen": false,
+    "transactionHistory": [],
+    "hasDebitCard": false,
+    "debitCardFirstName": "",
+    "debitCardLastName": "",
+    "debitCardNumber": ""
+  }
+]

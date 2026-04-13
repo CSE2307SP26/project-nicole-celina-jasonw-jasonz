@@ -1,0 +1,14 @@
+[
+  {
+    "accountName": "alice",
+    "accountPassword": "1234",
+    "isLoggedIn": false,
+    "balance": 0.0,
+    "frozen": false,
+    "transactionHistory": [],
+    "hasDebitCard": false,
+    "debitCardFirstName": "",
+    "debitCardLastName": "",
+    "debitCardNumber": ""
+  }
+]

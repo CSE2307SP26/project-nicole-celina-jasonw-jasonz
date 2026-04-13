@@ -1,50 +1,15 @@
 package main;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
-
-import java.io.*;
-import java.util.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.lang.reflect.Type;
-
 public class MainMenu {
-
     private static final int ACCOUNT_CUSTOMER_LOGIN = 1;
     private static final int ACCOUNT_CUSTOMER_SIGNUP = 2;
     private static final int ACCOUNT_ADMIN_LOGIN = 3;
     private static final int ACCOUNT_AUTH_EXIT = 4;
     private static final int MAX_AUTH_SELECTION = 4;
-
-    private static final int CUSTOMER_SELECT_ACCOUNT = 1;
-    private static final int CUSTOMER_OPEN_ACCOUNT = 2;
-    private static final int CUSTOMER_EXIT_TO_ROLE = 3;
-    private static final int MAX_CUSTOMER_MAIN_SELECTION = 3;
-
-    private static final int ACCT_DETAIL_DEPOSIT = 1;
-    private static final int ACCT_DETAIL_WITHDRAW = 2;
-    private static final int ACCT_DETAIL_CHECK_BALANCE = 3;
-    private static final int ACCT_DETAIL_TRANSFER = 4;
-    private static final int ACCT_DETAIL_TRANSACTION_HISTORY = 5;
-    private static final int ACCT_DETAIL_DEBIT_CARD = 6;
-    private static final int ACCT_DETAIL_CLOSE_ACCOUNT = 7;
-    private static final int ACCT_DETAIL_BACK = 8;
-    private static final int MAX_ACCOUNT_DETAIL_SELECTION = 8;
-
-    private static final int ADMIN_CHOOSE_ACCOUNT = 1;
-    private static final int ADMIN_REVIEW_PENDING_TRANSFERS = 2;
-    private static final int ADMIN_REVIEW_ACCOUNT_LIST = 3;
-    private static final int ADMIN_DELETE_ACCOUNT = 4;
-    private static final int ADMIN_BACK_TO_LOGIN = 5;
-    private static final int MAX_ADMIN_TOP_SELECTION = 5;
 
     /**
      * Transfers above this amount require administrator approval before funds
@@ -52,71 +17,49 @@ public class MainMenu {
      */
     public static final double LARGE_TRANSFER_THRESHOLD = 10000.0;
 
-    private static final int ADMIN_ACT_COLLECT_FEE = 1;
-    private static final int ADMIN_ACT_INTEREST = 2;
-    private static final int ADMIN_ACT_FREEZE = 3;
-    private static final int ADMIN_ACT_UNFREEZE = 4;
-    private static final int ADMIN_ACT_BACK_TO_LIST = 5;
-    private static final int MAX_ADMIN_ACTION_SELECTION = 5;
-
-    private static final String ADMIN_QUESTION_COLOR = "What is your favorite color?";
-    private static final String ADMIN_QUESTION_ANIMAL = "What is your favorite animal?";
-
     private final List<BankAccount> accounts;
     private final String accountsFile;
-    private final String adminFile;
-    private final List<PendingLargeTransfer> pendingLargeTransfers;
     private final Scanner keyboardInput;
-
-    public static class PendingLargeTransfer {
-
-        public final BankAccount from;
-        public final BankAccount to;
-        public final double amount;
-
-        public PendingLargeTransfer(BankAccount from, BankAccount to, double amount) {
-            this.from = from;
-            this.to = to;
-            this.amount = amount;
-        }
-    }
-
-    public static class AdminLoginInfo {
-        public String adminPassword;
-        public String favoriteColorAnswer;
-        public String favoriteAnimalAnswer;
-        
-        public AdminLoginInfo(String adminPassword, String favoriteColorAnswer, String favoriteAnimalAnswer) {
-            this.adminPassword = adminPassword;
-            this.favoriteColorAnswer = favoriteColorAnswer;
-            this.favoriteAnimalAnswer = favoriteAnimalAnswer;
-        }
-    }
+    private final List<PendingLargeTransfer> pendingLargeTransfers;
+    private final AccountStorage accountStorage;
+    private final AdminStorage adminStorage;
+    private final TimeStorage timeStorage;
+    private final SystemTime systemTime;
+    private final CustomerMenu customerMenu;
+    private final AdminMenu adminMenu;
+    private final ConsolePrompts prompts;
 
     public MainMenu() {
-        this("accounts.json");
+        this(StoragePaths.DEFAULT_ACCOUNTS_FILE);
     }
 
     public MainMenu(String accountsFile) {
         this.accountsFile = accountsFile;
-        this.adminFile = "admin_" + accountsFile;
         this.accounts = new ArrayList<>();
         this.pendingLargeTransfers = new ArrayList<>();
         this.keyboardInput = new Scanner(System.in);
-        initializeAccountsArrayList();
+        this.prompts = new ConsolePrompts(keyboardInput);
+        if (StoragePaths.DEFAULT_ACCOUNTS_FILE.equals(accountsFile)) {
+            StoragePaths.migrateLegacyStorageIfNeeded();
+        }
+        this.accountStorage = new AccountStorage(accountsFile);
+        this.adminStorage = new AdminStorage(StoragePaths.buildAdminFilePath(accountsFile));
+        this.timeStorage = new TimeStorage(StoragePaths.buildTimeFilePath(accountsFile));
+        this.systemTime = timeStorage.readOrDefault();
+        this.timeStorage.write(systemTime);
+        this.customerMenu = new CustomerMenu(accounts, pendingLargeTransfers, accountStorage, keyboardInput, systemTime, timeStorage);
+        this.adminMenu = new AdminMenu(accounts, pendingLargeTransfers, accountStorage, adminStorage, keyboardInput, systemTime, timeStorage);
+        customerMenu.initializeAccountsArrayList();
     }
 
     public int getPendingLargeTransferCount() {
         return pendingLargeTransfers.size();
     }
 
-    BankAccount getDefaultAccount() {
-        return accounts.get(0);
-    }
-
     public void displayAuthModeSelection() {
         System.out.println();
         System.out.println("Welcome to the 237 Bank App!");
+        System.out.println("Current day: Day " + systemTime.getCurrentDay());
         System.out.println("Do you have an account with us?");
         System.out.println("1. Log in as customer");
         System.out.println("2. Sign up for a customer account");
@@ -124,90 +67,26 @@ public class MainMenu {
         System.out.println("4. Exit the app");
     }
 
-    //Placeholder interface: no longer implemented due to authentication now being required for customers.
-    public void displayCustomerMainMenu() {
-        System.out.println();
-        System.out.println("--- Customer ---");
-        System.out.println("1. Select account");
-        System.out.println("2. Create account");
-        System.out.println("3. Return to role selection");
-    }
-
-    public void displayAdministratorTopMenu() {
-        System.out.println();
-        System.out.println("--- Administrator ---");
-        System.out.println("1. Select account to manage");
-        System.out.println("2. Review pending large transfers");
-        System.out.println("3. View account login info");
-        System.out.println("4. Delete an account");
-        System.out.println("5. Log out");
-    }
-
-    public int getUserSelection(int max) {
-        int selection = -1;
-        while (selection < 1 || selection > max) {
-            System.out.print("Please make a selection: ");
-            while (!keyboardInput.hasNextInt()) { // handle non-integer input
-                System.out.println("Invalid input. Please enter a number.");
-                keyboardInput.next();
-            }
-            selection = keyboardInput.nextInt();
-            keyboardInput.nextLine();
-        }
-        return selection;
-    }
-
     public List<BankAccount> getAccounts() {
         return accounts;
     }
 
-    /**
-     * Prints all accounts with 1-based indices (reusable for admin UI).
-     */
-    void printAccountListNumbered(List<BankAccount> list) {
-        System.out.println("Accounts:");
-        for (int i = 0; i < list.size(); i++) {
-            BankAccount a = list.get(i);
-            String frozenTag = a.isFrozen() ? " [FROZEN]" : "";
-            System.out.println("  " + (i + 1) + ". " + a.getAccountName()
-                    + " — balance: " + a.getBalance() + frozenTag);
-        }
+    // Kept for unit tests (overridable in test subclasses).
+    public double promptNonNegativeAmount(String message) {
+        return prompts.promptNonNegativeAmount(message);
     }
 
-    /**
-     * Prompts for a non-negative amount (0 allowed where caller treats it as
-     * invalid loop).
-     */
-    public double promptNonNegativeAmount(String prompt) {
-        double amount = -1;
-        while (amount < 0) {
-            System.out.print(prompt);
-            amount = keyboardInput.nextDouble();
-            if (amount < 0) {
-                System.out.println("Amount must be non-negative.");
-            }
-        }
-        return amount;
-    }
-
-    /**
-     * Prompts for a positive integer (e.g. months in an interest period).
-     */
-    int promptPositiveInt(String prompt) {
-        int n = 0;
-        while (n <= 0) {
-            System.out.print(prompt);
-            n = keyboardInput.nextInt();
-        }
-        return n;
-    }
-
-    // prompts for viable account index
-    public int promptAccountIndex(String prompt) {
+    // Kept for unit tests (overridable in test subclasses).
+    public int promptAccountIndex(String message) {
         int n = 0;
         while (n - 1 < 0 || n - 1 >= accounts.size()) {
-            System.out.print(prompt);
+            System.out.print(message);
+            while (!keyboardInput.hasNextInt()) {
+                System.out.println("Invalid input. Please enter a number.");
+                keyboardInput.next();
+            }
             n = keyboardInput.nextInt();
+            keyboardInput.nextLine();
             if (n - 1 < 0 || n - 1 >= accounts.size()) {
                 System.out.println("Invalid account index. Please try again.");
             }
@@ -215,143 +94,20 @@ public class MainMenu {
         return n;
     }
 
-    void displayAccountDetailMenu(BankAccount account) {
-        System.out.println();
-        System.out.println("--- Account detail: " + account.getAccountName() + " ---");
-        if (account.isFrozen()) {
-            System.out.println("(This account is frozen: deposits, withdrawals, and transfers are disabled.)");
-        }
-        System.out.println("1. Deposit");
-        System.out.println("2. Withdraw");
-        System.out.println("3. Check balance");
-        System.out.println("4. Transfer money");
-        System.out.println("5. View transaction history");
-        System.out.println("6. View debit card");
-        System.out.println("7. Close this account");
-        System.out.println("8. Exit program");
-    }
-
-    public void performDeposit(BankAccount account) {
-        if (account.isFrozen()) {
-            System.out.println("This account is frozen. Deposits are not allowed.");
-            return;
-        }
-        double depositAmount = promptNonNegativeAmount("How much would you like to deposit: ");
-        if (depositAmount == 0) {
-            System.out.println("No deposit made.");
-            return;
-        }
-        try {
-            account.deposit(depositAmount);
-            account.recordTransaction("Deposit", depositAmount);
-            System.out.println("Deposit successful. ");
-        } catch (IllegalStateException e) {
-            System.out.println(e.getMessage());
-        } catch (IllegalArgumentException e) {
-            System.out.println("Invalid amount.");
-        }
-    }
-
-    public void performWithdrawal(BankAccount account) {
-        if (account.isFrozen()) {
-            System.out.println("This account is frozen. Withdrawals are not allowed.");
-            return;
-        }
-        double withdrawalAmount = promptNonNegativeAmount("How much would you like to withdraw: ");
-
-        if (withdrawalAmount == 0) {
-            System.out.println("No withdrawal made.");
-            return;
-        }
-        try {
-            account.withdraw(withdrawalAmount);
-            account.recordTransaction("Withdraw", -withdrawalAmount);
-            System.out.println("Withdrawal successful.");
-        } catch (IllegalStateException e) {
-            System.out.println(e.getMessage());
-        } catch (IllegalArgumentException e) {
-            System.out.println("Invalid amount.");
-        }
-    }
-
-    public void performCheckBalance(BankAccount account) {
-        System.out.println("Current balance: " + account.getBalance());
-    }
-
-    public void performViewDebitCard(BankAccount account) {
-        if(account.hasDebitCard()) {
-            System.out.println("---Here's your debit card information---");
-            System.out.println("Cardholder name: " + account.getDebitCardFirstName() + " " + account.getDebitCardLastName());
-            System.out.println("Card number: " + account.getDebitCardNumber());
-            System.out.println("Linked bank account: " + account.getAccountName());
-            return;
-        }
-        System.out.println("This account currently does not have a debit card. You can choose to set one up.");
-        System.out.println("1. Set up debit card");
-        System.out.println("2. Back to account detail");
-        int userCreateDebitCardChoice = getUserSelection(2);
-        if(userCreateDebitCardChoice != 1) {
-            return;
-        }
-        System.out.print("Enter first name for the debit card: ");
-        String firstName = keyboardInput.nextLine().trim();
-        System.out.print("Enter last name for the debit card: ");
-        String lastName = keyboardInput.nextLine().trim();
-        if(firstName.isEmpty() || lastName.isEmpty()) {
-            System.out.println("First and last name cannot be empty.");
-            return;
-        }
-        account.createDebitCard(firstName, lastName);
-        System.out.println("---Your debit card has been set up---");
-        System.out.println("Cardholder name: " + account.getDebitCardFirstName() + " " + account.getDebitCardLastName());
-        System.out.println("Card number: " + account.getDebitCardNumber());
-        System.out.println("Linked bank account: " + account.getAccountName());
-    }
-
-    public void performCloseAccount(BankAccount account, boolean isTesting) {
-        accounts.remove(account);
-        writeAccountsToFile(accounts);
-        System.out.println("Account [" + account.getAccountName() + "] is closed. Taking you back to the main menu.");
-    }
-
+    // Kept for unit tests; production flow uses CustomerMenu.
     public void performTransferWithdraw(BankAccount account) {
-        System.out.println("--- Transfer money between accounts ---");
-        if (account.isFrozen()) {
-            System.out.println("This account is frozen. Transfers are not allowed.");
-            return;
-        }
-        printAccountListNumbered(accounts);
-        double transferAmount = promptNonNegativeAmount("Amount to transfer from [" + account.getAccountName() + "]: ");
-        if (transferAmount == 0) {
-            System.out.println("No transfer made.");
-            return;
-        }
-        int targetAccountIndex = promptAccountIndex("Select the account to transfer this amount into: ");
-        BankAccount targetAccount = accounts.get(targetAccountIndex - 1);
-        if (targetAccount == account) {
-            System.out.println("You cannot transfer money to the same account.");
-            return;
-        }
-        if (targetAccount.isFrozen()) {
-            System.out.println("The destination account is frozen. Transfers are not allowed.");
-            return;
-        }
-        if (account.getBalance() < transferAmount) {
-            System.out.println("Insufficient balance.");
-            return;
-        }
-        if (transferAmount > LARGE_TRANSFER_THRESHOLD) {
-            if (account.getBalance() < transferAmount) {
-                System.out.println("Insufficient balance.");
-                return;
-            }
-            pendingLargeTransfers.add(new PendingLargeTransfer(account, targetAccount, transferAmount));
-            System.out.println("This transfer exceeds $" + LARGE_TRANSFER_THRESHOLD
-                    + " and requires administrator approval. Your request has been submitted.");
-            return;
-        }
         try {
-            completeImmediateTransfer(account, targetAccount, transferAmount);
+            TransferFlow.performTransferWithdraw(account, accounts, pendingLargeTransfers, new TransferPrompts() {
+                @Override
+                public double promptNonNegativeAmount(String message) {
+                    return MainMenu.this.promptNonNegativeAmount(message);
+                }
+
+                @Override
+                public int promptAccountIndex(String message) {
+                    return MainMenu.this.promptAccountIndex(message);
+                }
+            });
         } catch (IllegalArgumentException e) {
             System.out.println("Invalid amount.");
         } catch (IllegalStateException e) {
@@ -359,535 +115,41 @@ public class MainMenu {
         }
     }
 
-    void completeImmediateTransfer(BankAccount from, BankAccount to, double transferAmount) {
-        from.withdraw(transferAmount);
-        from.recordTransaction("Transfer Out", -transferAmount);
-        to.deposit(transferAmount);
-        to.recordTransaction("Transfer In", transferAmount);
-        System.out.println("--- Here's your updated account balance: ---");
-        System.out.println(from.getAccountName() + ": " + from.getBalance());
-        System.out.println(to.getAccountName() + ": " + to.getBalance());
-    }
-
-    void runPendingLargeTransfersReview() {
-        while (true) {
-            if (pendingLargeTransfers.isEmpty()) {
-                System.out.println("No pending large transfer requests.");
-                return;
-            }
-            System.out.println();
-            System.out.println("--- Pending large transfers (over $" + LARGE_TRANSFER_THRESHOLD + ") ---");
-            for (int i = 0; i < pendingLargeTransfers.size(); i++) {
-                PendingLargeTransfer p = pendingLargeTransfers.get(i);
-                System.out.println((i + 1) + ". " + p.from.getAccountName() + " -> " + p.to.getAccountName()
-                        + " | $" + p.amount);
-            }
-            int backIndex = pendingLargeTransfers.size() + 1;
-            System.out.println("  " + backIndex + ". Back");
-            int choice = getUserSelection(backIndex);
-            if (choice == backIndex) {
-                return;
-            }
-            PendingLargeTransfer selected = pendingLargeTransfers.get(choice - 1);
-            System.out.println("1. Approve");
-            System.out.println("2. Deny");
-            System.out.println("3. Cancel");
-            int action = getUserSelection(3);
-            if (action == 1) {
-                approvePendingLargeTransfer(selected);
-            } else if (action == 2) {
-                denyPendingLargeTransfer(selected);
-            }
-        }
-    }
-
-    void approvePendingLargeTransfer(PendingLargeTransfer p) {
-        int idx = pendingLargeTransfers.indexOf(p);
-        if (idx < 0) {
-            System.out.println("That request is no longer pending.");
-            return;
-        }
-        if (p.from.isFrozen() || p.to.isFrozen()) {
-            System.out.println("Cannot approve: one or both accounts are frozen.");
-            return;
-        }
-        if (p.from.getBalance() < p.amount) {
-            System.out.println("Cannot approve: insufficient balance. Request removed.");
-            pendingLargeTransfers.remove(idx);
-            return;
-        }
-        try {
-            completeImmediateTransfer(p.from, p.to, p.amount);
-            pendingLargeTransfers.remove(p);
-            System.out.println("Large transfer approved and completed.");
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            System.out.println("Transfer failed: " + e.getMessage());
-        }
-    }
-
-    void denyPendingLargeTransfer(PendingLargeTransfer p) {
-        if (pendingLargeTransfers.remove(p)) {
-            System.out.println("Request denied and removed.");
-        }
-    }
-
-    public void performViewTransactionHistory(BankAccount account) {
-        if (account.getTransactionHistory().isEmpty()) {
-            System.out.println("No transactions yet.");
-            return;
-        } else {
-            System.out.println("Transaction History for: " + account.getAccountName());
-            for (String transaction : account.getTransactionHistory()) {
-                System.out.println(transaction);
-            }
-        }
-    }
-
-    void runAccountDetailLoop(BankAccount account) {
-        int action = -1;
-        while (action != ACCT_DETAIL_BACK) {
-            displayAccountDetailMenu(account);
-            action = getUserSelection(MAX_ACCOUNT_DETAIL_SELECTION);
-            switch (action) {
-                case ACCT_DETAIL_DEPOSIT:
-                    performDeposit(account);
-                    break;
-                case ACCT_DETAIL_WITHDRAW:
-                    performWithdrawal(account);
-                    break;
-                case ACCT_DETAIL_CHECK_BALANCE:
-                    performCheckBalance(account);
-                    break;
-                case ACCT_DETAIL_TRANSFER:
-                    performTransferWithdraw(account);
-                    break;
-                case ACCT_DETAIL_TRANSACTION_HISTORY:
-                    performViewTransactionHistory(account);
-                    break;
-                case ACCT_DETAIL_DEBIT_CARD:
-                    performViewDebitCard(account);
-                    break;
-                case ACCT_DETAIL_CLOSE_ACCOUNT:
-                    performCloseAccount(account, false);
-                    return;
-                default:
-                    break;
-            }
-        }
-    }
-
-    void runSelectAccountFlow() {
-        if (accounts.isEmpty()) {
-            System.out.println("You have no accounts yet. Open an account first.");
-            return;
-        }
-        BankAccount selected = promptSelectAccountOrBack();
-        if (selected != null) {
-            runAccountDetailLoop(selected);
-        }
-    }
-
-    /**
-     * Returns chosen account, or null if user chose back.
-     */
-    BankAccount promptSelectAccountOrBack() {
-        printAccountListNumbered(accounts);
-        int backIndex = accounts.size() + 1;
-        System.out.println("  " + backIndex + ". Back");
-        int choice = getUserSelection(backIndex);
-        if (choice == backIndex) {
-            return null;
-        }
-        return accounts.get(choice - 1);
-    }
-
-    void displayAdminActionsForAccount(BankAccount account) {
-        System.out.println();
-        System.out.println("Managing: " + account.getAccountName() + " | Balance: " + account.getBalance()
-                + (account.isFrozen() ? " | FROZEN" : ""));
-        System.out.println("1. Collect fee");
-        System.out.println("2. Apply interest payment (rate % × principal × period)");
-        System.out.println("3. Freeze account");
-        System.out.println("4. Unfreeze account");
-        System.out.println("5. Back to account list");
-    }
-
-    void performCollectFee(BankAccount account) {
-        double fee = promptNonNegativeAmount("Fee amount to collect: ");
-        if (fee == 0) {
-            System.out.println("No fee collected.");
-            return;
-        }
-        try {
-            account.collectFee(fee);
-            System.out.println("Fee collected. New balance: " + account.getBalance());
-        } catch (IllegalArgumentException e) {
-            System.out.println("Invalid amount.");
-        } catch (IllegalStateException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    void performInterestPayment(BankAccount account) {
-        double principal = account.getBalance();
-        if (principal <= 0) {
-            System.out.println("No principal balance — no interest can accrue.");
-            return;
-        }
-        System.out.println("Principal (current balance): " + principal);
-        System.out.println("Interest = principal × (annual rate % / 100) × (months / 12).");
-        double annualRate = promptNonNegativeAmount("Annual interest rate (% per year), e.g. 3 for 3%: ");
-        int months = promptPositiveInt("Number of months in this accrual period: ");
-        if (annualRate == 0) {
-            System.out.println("Rate is 0% — no interest credited.");
-            return;
-        }
-        try {
-            double credited = account.applyInterestPayment(annualRate, months);
-            System.out.println("Interest credited: " + credited);
-            System.out.println("New balance: " + account.getBalance());
-        } catch (IllegalArgumentException e) {
-            System.out.println("Invalid rate or period.");
-        }
-    }
-
-    void performFreezeAccount(BankAccount account) {
-        if (account.isFrozen()) {
-            System.out.println("This account is already frozen.");
-            return;
-        }
-        account.setFrozen(true);
-        System.out.println("Account \"" + account.getAccountName() + "\" is now frozen.");
-    }
-
-    void performUnfreezeAccount(BankAccount account) {
-        if (!account.isFrozen()) {
-            System.out.println("This account is not frozen.");
-            return;
-        }
-        account.setFrozen(false);
-        System.out.println("Account \"" + account.getAccountName() + "\" is now unfrozen.");
-    }
-
-    void runAdminAccountActions(BankAccount account) {
-        int action = -1;
-        while (action != ADMIN_ACT_BACK_TO_LIST) {
-            displayAdminActionsForAccount(account);
-            action = getUserSelection(MAX_ADMIN_ACTION_SELECTION);
-            switch (action) {
-                case ADMIN_ACT_COLLECT_FEE:
-                    performCollectFee(account);
-                    break;
-                case ADMIN_ACT_INTEREST:
-                    performInterestPayment(account);
-                    break;
-                case ADMIN_ACT_FREEZE:
-                    performFreezeAccount(account);
-                    break;
-                case ADMIN_ACT_UNFREEZE:
-                    performUnfreezeAccount(account);
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
-
-    public void runAdministratorFlow() {
-        int top = -1;
-        while (top != ADMIN_BACK_TO_LOGIN) {
-            displayAdministratorTopMenu();
-            top = getUserSelection(MAX_ADMIN_TOP_SELECTION);
-            if (top == ADMIN_CHOOSE_ACCOUNT) {
-                runAdminAccountSelectionLoop();
-            } else if (top == ADMIN_REVIEW_PENDING_TRANSFERS) {
-                runPendingLargeTransfersReview();
-            } else if (top == ADMIN_REVIEW_ACCOUNT_LIST) {
-                runPrintAccountsFromFile();
-            } else if (top == ADMIN_DELETE_ACCOUNT) {
-                runAdminDeleteAccountFlow();
-            } else if (top == ADMIN_BACK_TO_LOGIN) {
-                // loop will exit and return to main menu
-            }
-        }
-    }
-
-    void runAdminAccountSelectionLoop() {
-        boolean backToAdminTop = false;
-        while (!backToAdminTop) {
-            BankAccount selected = promptSelectAccountOrBack();
-            if (selected == null) {
-                backToAdminTop = true;
-            } else {
-                runAdminAccountActions(selected);
-            }
-        }
-    }
-
-
-    // feature: customer sign up
-
-    private List<BankAccount> readAccountsFromFile() {
-        File file = new File(accountsFile);
-        if (!file.exists() || file.length() == 0) return new ArrayList<>();
-        Type listType = new TypeToken<List<BankAccount>>(){}.getType();
-        try (FileReader reader = new FileReader(file)) {
-            List<BankAccount> result = new Gson().fromJson(reader, listType);
-            return result != null ? result : new ArrayList<>();
-        } catch (IOException e) {
-            System.out.println("Error reading accounts file.");
-            return new ArrayList<>();
-        }
-    }
-
-    private void writeAccountsToFile(List<BankAccount> list) {
-        try (FileWriter writer = new FileWriter(accountsFile)) {
-            new GsonBuilder().setPrettyPrinting().create().toJson(list, writer);
-        } catch (IOException e) {
-            System.out.println("Error writing accounts file.");
-        }
-    }
-
-    private AdminLoginInfo readAdminLoginInfoFromFile() {
-        File file = new File(adminFile);
-        if(!file.exists() || file.length() == 0) {
-            return null;
-        }
-        try (FileReader reader = new FileReader(file)) {
-            return new Gson().fromJson(reader, AdminLoginInfo.class);
-        }
-        catch (IOException e) {
-            System.out.println("Error reading admin account file.");
-            return null;
-        }
-    }
-
-    private void writeAdminLoginInfoToFile(AdminLoginInfo adminInfo) {
-        try (FileWriter writer = new FileWriter(adminFile)) {
-            new GsonBuilder().setPrettyPrinting().create().toJson(adminInfo, writer);
-        }
-        catch (IOException e) {
-            System.out.println("Error writing admin file.");
-        }
-    }
-
-    public void recordAdminSetup(String adminPassword, String favoriteColorAnswer, String favoriteAnimalAnswer) {
-        AdminLoginInfo adminInfo = new AdminLoginInfo(adminPassword, favoriteColorAnswer, favoriteAnimalAnswer);
-        writeAdminLoginInfoToFile(adminInfo);
-    }
-
-    public boolean checkAdminPassword(String adminPassword) {
-        AdminLoginInfo adminInfo = readAdminLoginInfoFromFile();
-        if(adminInfo == null) {
-            return false;
-        }
-        return adminInfo.adminPassword.equals(adminPassword);
-    }
-
-    public boolean checkAdminAnswer(String question, String answer) {
-        AdminLoginInfo adminInfo = readAdminLoginInfoFromFile();
-        if(adminInfo == null) {
-            return false;
-        }
-        if(question.equals(ADMIN_QUESTION_COLOR)) {
-            return adminInfo.favoriteColorAnswer.equalsIgnoreCase(answer);
-        }
-        if(question.equals(ADMIN_QUESTION_ANIMAL)) {
-            return adminInfo.favoriteAnimalAnswer.equalsIgnoreCase(answer);
-        }
-        return false;
-    }
-
-    public boolean adminSetupExists() {
-        return readAdminLoginInfoFromFile() != null;
-    }
-
-    public String getRandomAdminQuestion() {
-        int questionNumber = (int)(Math.random() * 2);
-        if(questionNumber == 0) {
-            return ADMIN_QUESTION_COLOR;
-        }
-        return ADMIN_QUESTION_ANIMAL;
-    }
-
-    private boolean isUsernameTaken(String username, List<BankAccount> stored) {
-        for (BankAccount acc : stored) {
-            if (username.equals(acc.getAccountName())) return true;
-        }
-        return false;
-    }
-
-    public boolean recordNewAccount(BankAccount newAccount) {
-        List<BankAccount> stored = readAccountsFromFile();
-        if (isUsernameTaken(newAccount.getAccountName(), stored)) {
-            System.out.println("This username already exists. Try again with a different username.");
-            return false;
-        }
-        stored.add(newAccount);
-        writeAccountsToFile(stored);
-        accounts.add(newAccount);
-        return true;
-    }
-
-    public void runCustomerSignUpFlow() {
-        System.out.println();
-        System.out.println("Create a username: ");
-        String newAccountUsername = keyboardInput.next();
-        System.out.println("Create a password: ");
-        String newAccountPassword = keyboardInput.next();
-        BankAccount newAccount = new BankAccount(newAccountUsername, newAccountPassword);
-        newAccount.setLoggedIn(true);
-        boolean created = recordNewAccount(newAccount);
-        if (created) {
-            System.out.println("Your new account (" + newAccountUsername + ") has been created. Automatically logging you in.");
-            runAccountDetailLoop(newAccount);
-        } else {
-            run();
-        }
-    }
-
-    public void runAdminSetupFlow() {
-        System.out.println();
-        System.out.println("Detected first time login. Create your administrator password: ");
-        String adminPassword = keyboardInput.next();
-        System.out.println("You will answer two security questions. One of them will be asked when you login.");
-        System.out.println(ADMIN_QUESTION_COLOR);
-        String favoriteColorAnswer = keyboardInput.next();
-        System.out.println(ADMIN_QUESTION_ANIMAL);
-        String favoriteAnimalAnswer = keyboardInput.next();
-        if(adminPassword.isEmpty() || favoriteColorAnswer.isEmpty() || favoriteAnimalAnswer.isEmpty()) {
-            System.out.println("Password and answer cannot be empty.");
-            return;
-        }
-        recordAdminSetup(adminPassword, favoriteColorAnswer, favoriteAnimalAnswer);
-        System.out.println("Administrator login setup is completed.");
-    }
-
-    public void runAdminLoginFlow() {
-        if(!adminSetupExists()) {
-            runAdminSetupFlow();
-            return;
-        }
-        System.out.println();
-        System.out.println("Enter administrator password: ");
-        String adminPassword = keyboardInput.next();
-
-        if(!checkAdminPassword(adminPassword)) {
-            System.out.println("Incorrect password. Returning to menu.");
-            return;
-        }
-        String question = getRandomAdminQuestion();
-        System.out.println(question);
-        String answer = keyboardInput.next();
-        if(!checkAdminAnswer(question, answer)) {
-            System.out.println("Incorrect answer to security question. Returning to menu.");
-            return;
-        }
-        System.out.println("Administrator login successful.");
-        runAdministratorFlow();
+    // Kept for unit tests (signature + behavior).
+    public void performCloseAccount(BankAccount account, boolean isTesting) {
+        customerMenu.performCloseAccount(account);
     }
 
     public void initializeAccountsArrayList() {
-        List<BankAccount> persisted = readAccountsFromFile();
-        persisted.removeIf(acc -> acc.getAccountName().equals("defaultaccount"));
-        accounts.clear();
-        accounts.addAll(persisted);
-        writeAccountsToFile(accounts);
+        customerMenu.initializeAccountsArrayList();
     }
 
-    // feature: view all accounts (admin)
     public void runPrintAccountsFromFile() {
-        List<BankAccount> stored = readAccountsFromFile();
-        if (stored.isEmpty()) {
-            System.out.println("No registered accounts found.");
-            return;
-        }
-        System.out.println();
-        System.out.println("Here's a list of registered customer accounts: ");
-        System.out.println("------------------------");
-        if (stored.isEmpty()) { System.out.println("(none)"); return; }
-        for (BankAccount acc : stored) {
-            System.out.println("Username: " + acc.getAccountName());
-            System.out.println("Password: " + acc.getAccountPassword());
-            System.out.println("------------------------");
-        }
+        adminMenu.runPrintAccountsFromFile();
     }
 
-    // TODO: adapt from previous runCustomerFlow()
-    /**
-    public void runLogInFlow() {
-        int selection = -1;
-        while (selection != CUSTOMER_EXIT_TO_ROLE) {
-            displayCustomerMainMenu();
-            selection = getUserSelection(MAX_CUSTOMER_MAIN_SELECTION);
-            switch (selection) {
-                case CUSTOMER_SELECT_ACCOUNT:
-                    runSelectAccountFlow();
-                    break;
-                case CUSTOMER_OPEN_ACCOUNT:
-                    // performCreateAccount();
-                    break;
-                default:
-                    break;
-            }
-        }
-    } */
-
-    // feature: customer login (existing account)
     public BankAccount authenticateCustomerLogin(String username, String password) {
-        for (BankAccount acc : accounts) {
-            if (acc.getAccountName().equals(username) && acc.getAccountPassword().equals(password)) {
-                return acc;
-            }
-        }
-        return null;
+        return customerMenu.authenticateCustomerLogin(username, password);
     }
 
-    public void runCustomerLogInFlow() {
-        System.out.println();
-        System.out.println("Enter your username: ");
-        String username = keyboardInput.next();
-        System.out.println("Enter your password: ");
-        String password = keyboardInput.next();
-        BankAccount account = authenticateCustomerLogin(username, password);
-        if (account == null) {
-            System.out.println("Invalid username or password. Returning to main menu.");
-            return;
-        }
-        account.setLoggedIn(true);
-        System.out.println("Login successful. Welcome back, " + account.getAccountName() + "!");
-        runAccountDetailLoop(account);
-    }
-
-    // feature: admin can delete accounts that have no unresolved pending transfers
     public void runAdminDeleteAccount(BankAccount account) {
-        for (PendingLargeTransfer p : pendingLargeTransfers) {
-            if (p.from == account || p.to == account) {
-                System.out.println("Cannot delete this account: large transfer request unresolved.");
-                return;
-            }
-        }
-        accounts.remove(account);
-        writeAccountsToFile(accounts);
-        System.out.println("Account [" + account.getAccountName() + "] is deleted.");
+        adminMenu.runAdminDeleteAccount(account);
     }
 
-    public void runAdminDeleteAccountFlow() {
-        runPrintAccountsFromFile();
-        System.out.println("Select the account to delete by username: ");
-        String account = keyboardInput.next();
-        BankAccount toDelete = null;
-        for (BankAccount acc: accounts) {
-            if (acc.getAccountName().equals(account)) {
-                toDelete = acc;
-                break;
-            }
-        }
-        if (toDelete != null) {
-            runAdminDeleteAccount(toDelete);
-        } else {
-            System.out.println("Account not found.");
-        }
+    public void recordAdminSetup(String adminPassword, String favoriteColorAnswer, String favoriteAnimalAnswer) {
+        adminMenu.recordAdminSetup(adminPassword, favoriteColorAnswer, favoriteAnimalAnswer);
+    }
+
+    public boolean checkAdminPassword(String adminPassword) {
+        return adminMenu.checkAdminPassword(adminPassword);
+    }
+
+    public boolean checkAdminAnswer(String question, String answer) {
+        return adminMenu.checkAdminAnswer(question, answer);
+    }
+
+    public boolean recordNewAccount(BankAccount newAccount) {
+        return customerMenu.recordNewAccount(newAccount);
     }
 
     public void run() {
@@ -895,13 +157,13 @@ public class MainMenu {
         int accountAccessMethod = -1;
         while (accountAccessMethod != ACCOUNT_AUTH_EXIT) {
             displayAuthModeSelection();
-            accountAccessMethod = getUserSelection(MAX_AUTH_SELECTION);
+            accountAccessMethod = prompts.getUserSelection(MAX_AUTH_SELECTION);
             if (accountAccessMethod == ACCOUNT_CUSTOMER_LOGIN) {
-                runCustomerLogInFlow();
+                customerMenu.runCustomerLogInFlow();
             } else if (accountAccessMethod == ACCOUNT_CUSTOMER_SIGNUP) {
-                runCustomerSignUpFlow();
+                customerMenu.runCustomerSignUpFlow();
             } else if (accountAccessMethod == ACCOUNT_ADMIN_LOGIN) {
-                runAdminLoginFlow();
+                adminMenu.runAdminLoginFlow();
             } else if (accountAccessMethod == ACCOUNT_AUTH_EXIT) {
                 // exit loop and end program
             }
@@ -916,3 +178,124 @@ public class MainMenu {
     }
 
 }
+
+class PendingLargeTransfer {
+    final BankAccount from;
+    final BankAccount to;
+    final double amount;
+
+    PendingLargeTransfer(BankAccount from, BankAccount to, double amount) {
+        this.from = from;
+        this.to = to;
+        this.amount = amount;
+    }
+}
+
+class ConsolePrompts {
+    private final Scanner keyboardInput;
+
+    ConsolePrompts(Scanner keyboardInput) {
+        this.keyboardInput = keyboardInput;
+    }
+
+    int getUserSelection(int max) {
+        int selection = -1;
+        while (selection < 1 || selection > max) {
+            System.out.print("Please make a selection: ");
+            while (!keyboardInput.hasNextInt()) {
+                System.out.println("Invalid input. Please enter a number.");
+                keyboardInput.next();
+            }
+            selection = keyboardInput.nextInt();
+            keyboardInput.nextLine();
+        }
+        return selection;
+    }
+
+    double promptNonNegativeAmount(String prompt) {
+        double amount = -1;
+        while (amount < 0) {
+            System.out.print(prompt);
+            amount = keyboardInput.nextDouble();
+            if (amount < 0) {
+                System.out.println("Amount must be non-negative.");
+            }
+        }
+        keyboardInput.nextLine();
+        return amount;
+    }
+
+    int promptPositiveInt(String prompt) {
+        int n = 0;
+        while (n <= 0) {
+            System.out.print(prompt);
+            n = keyboardInput.nextInt();
+            keyboardInput.nextLine();
+        }
+        return n;
+    }
+}
+
+interface TransferPrompts {
+    double promptNonNegativeAmount(String message);
+
+    int promptAccountIndex(String message);
+}
+
+final class TransferFlow {
+    private TransferFlow() {}
+
+    static void performTransferWithdraw(
+            BankAccount from,
+            List<BankAccount> accounts,
+            List<PendingLargeTransfer> pendingLargeTransfers,
+            TransferPrompts prompts
+    ) {
+        System.out.println("--- Transfer money between accounts ---");
+        if (from.isFrozen()) {
+            System.out.println("This account is frozen. Transfers are not allowed.");
+            return;
+        }
+        printAccountListNumbered(accounts);
+        double amount = prompts.promptNonNegativeAmount("Amount to transfer from [" + from.getAccountName() + "]: ");
+        if (amount == 0) {
+            System.out.println("No transfer made.");
+            return;
+        }
+        int targetIdx = prompts.promptAccountIndex("Select the account to transfer this amount into: ");
+        BankAccount to = accounts.get(targetIdx - 1);
+        if (to == from) {
+            System.out.println("You cannot transfer money to the same account.");
+            return;
+        }
+        if (to.isFrozen()) {
+            System.out.println("The destination account is frozen. Transfers are not allowed.");
+            return;
+        }
+        if (from.getBalance() < amount) {
+            System.out.println("Insufficient balance.");
+            return;
+        }
+        if (amount > MainMenu.LARGE_TRANSFER_THRESHOLD) {
+            pendingLargeTransfers.add(new PendingLargeTransfer(from, to, amount));
+            System.out.println("This transfer exceeds $" + MainMenu.LARGE_TRANSFER_THRESHOLD
+                    + " and requires administrator approval. Your request has been submitted.");
+            return;
+        }
+        from.withdraw(amount);
+        from.recordTransaction("Transfer Out", -amount);
+        to.deposit(amount);
+        to.recordTransaction("Transfer In", amount);
+    }
+
+    private static void printAccountListNumbered(List<BankAccount> list) {
+        System.out.println("Accounts:");
+        for (int i = 0; i < list.size(); i++) {
+            BankAccount a = list.get(i);
+            String frozenTag = a.isFrozen() ? " [FROZEN]" : "";
+            System.out.println("  " + (i + 1) + ". " + a.getAccountName()
+                    + " — balance: " + a.getBalance() + frozenTag);
+        }
+    }
+}
+
