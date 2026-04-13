@@ -9,6 +9,10 @@
     "hasDebitCard": false,
     "debitCardFirstName": "",
     "debitCardLastName": "",
-    "debitCardNumber": ""
+    "debitCardNumber": "",
+    "hasActiveLoan": false,
+    "activeLoanPrincipal": 0.0,
+    "activeLoanRepaymentAmount": 0.0,
+    "activeLoanDueDay": 0
   }
 ]

@@ -286,5 +286,61 @@ public class BankAccountCoreTest {
             assertEquals(100, testAccount.getBalance(), 0.01);
         }
     }
+
+    @Test
+    public void testApplyLoanCreditsBalanceAndSetsDueInfo() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.applyLoan(200.0, 7, 1);
+        assertTrue(testAccount.hasActiveLoan());
+        assertEquals(200.0, testAccount.getBalance(), 0.01);
+        assertEquals(8, testAccount.getActiveLoanDueDay());
+        assertEquals(210.0, testAccount.getActiveLoanRepaymentAmount(), 0.01);
+    }
+
+    @Test
+    public void testProcessLoanIfDueDeductsRepaymentWhenSufficientFunds() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.applyLoan(100.0, 3, 1); // Due day = 4, repayment = 105
+        testAccount.deposit(10.0); // Total balance now = 110
+        boolean processed = testAccount.processLoanIfDue(4);
+        assertTrue(processed);
+        assertFalse(testAccount.hasActiveLoan());
+        assertFalse(testAccount.isFrozen());
+        assertEquals(5.0, testAccount.getBalance(), 0.01);
+    }
+
+    @Test
+    public void testProcessLoanIfDueFreezesWhenInsufficientFunds() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.applyLoan(100.0, 2, 1); // Due day = 3, repayment = 105
+        boolean processed = testAccount.processLoanIfDue(3);
+        assertTrue(processed);
+        assertFalse(testAccount.hasActiveLoan());
+        assertTrue(testAccount.isFrozen());
+        assertEquals(100.0, testAccount.getBalance(), 0.01);
+    }
+
+    @Test
+    public void testProcessLoanIfDueBeforeDueDateNoChange() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.applyLoan(100.0, 5, 1); // Due day = 6
+        boolean processed = testAccount.processLoanIfDue(5);
+        assertFalse(processed);
+        assertTrue(testAccount.hasActiveLoan());
+        assertEquals(100.0, testAccount.getBalance(), 0.01);
+    }
+
+    @Test
+    public void testCannotApplySecondLoanWhenActiveLoanExists() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.applyLoan(50.0, 2, 1);
+        try {
+            testAccount.applyLoan(20.0, 2, 1);
+            fail();
+        } catch (IllegalStateException e) {
+            assertEquals(50.0, testAccount.getBalance(), 0.01);
+            assertTrue(testAccount.hasActiveLoan());
+        }
+    }
 }
 

@@ -44,8 +44,9 @@ class CustomerMenu {
         System.out.println("5. View transaction history");
         System.out.println("6. View debit card");
         System.out.println("7. Close this account");
-        System.out.println("8. Fast-forward time (days)");
-        System.out.println("9. Exit program");
+        System.out.println("8. Apply for a loan");
+        System.out.println("9. Fast-forward time (days)");
+        System.out.println("10. Exit program");
     }
 
     BankAccount authenticateCustomerLogin(String username, String password) {
@@ -128,9 +129,9 @@ class CustomerMenu {
 
     private void runAccountDetailLoop(BankAccount account) {
         int action = -1;
-        while (action != 9) {
+        while (action != 10) {
             displayAccountDetailMenu(account);
-            action = prompts.getUserSelection(9);
+            action = prompts.getUserSelection(10);
             if (!handleAccountDetailAction(action, account)) {
                 return;
             }
@@ -161,6 +162,9 @@ class CustomerMenu {
                 performCloseAccount(account);
                 return false;
             case 8:
+                applyLoanFlow(account);
+                return true;
+            case 9:
                 fastForwardTimeFlow();
                 return true;
             default:
@@ -168,14 +172,46 @@ class CustomerMenu {
         }
     }
 
+    private void applyLoanFlow(BankAccount account) {
+        double amount = prompts.promptNonNegativeAmount("Enter loan amount: ");
+        if (amount == 0) {
+            System.out.println("No loan created.");
+            return;
+        }
+        int repaymentDays = prompts.promptPositiveInt("Enter days until repayment is due: ");
+        try {
+            account.applyLoan(amount, repaymentDays, systemTime.getCurrentDay());
+            accountStorage.writeAccounts(accounts);
+            System.out.println("Loan approved at fixed interest rate: " + (BankAccount.LOAN_FIXED_INTEREST_RATE * 100) + "%");
+            System.out.println("Repayment due on Day " + account.getActiveLoanDueDay()
+                    + " for amount: " + account.getActiveLoanRepaymentAmount());
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
     private void fastForwardTimeFlow() {
         int days = prompts.promptPositiveInt("Enter number of days to fast-forward: ");
         try {
             systemTime.advanceDays(days);
+            processDueLoansForAllAccounts();
             timeStorage.write(systemTime);
             System.out.println("Time advanced. Current day is now Day " + systemTime.getCurrentDay());
         } catch (IllegalArgumentException e) {
             System.out.println(e.getMessage());
+        }
+    }
+
+    private void processDueLoansForAllAccounts() {
+        boolean anyProcessed = false;
+        for (BankAccount acc : accounts) {
+            if (acc.processLoanIfDue(systemTime.getCurrentDay())) {
+                anyProcessed = true;
+            }
+        }
+        if (anyProcessed) {
+            accountStorage.writeAccounts(accounts);
+            System.out.println("Loan repayment processing completed for due accounts.");
         }
     }
 
