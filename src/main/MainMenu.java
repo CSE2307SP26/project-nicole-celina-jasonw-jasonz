@@ -46,6 +46,8 @@ public class MainMenu {
         this.adminStorage = new AdminStorage(StoragePaths.buildAdminFilePath(accountsFile));
         this.timeStorage = new TimeStorage(StoragePaths.buildTimeFilePath(accountsFile));
         this.systemTime = timeStorage.readOrDefault();
+        // Requirement: each app restart resets time to Day 1.
+        this.systemTime.currentDay = 1;
         this.timeStorage.write(systemTime);
         this.customerMenu = new CustomerMenu(accounts, pendingLargeTransfers, accountStorage, keyboardInput, systemTime, timeStorage);
         this.adminMenu = new AdminMenu(accounts, pendingLargeTransfers, accountStorage, adminStorage, keyboardInput, systemTime, timeStorage);
