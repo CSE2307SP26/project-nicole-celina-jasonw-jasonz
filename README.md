@@ -1,4 +1,31 @@
-# project26 Bank System Information Architecture
+# project26 Bank System
+
+## Team Members:
+
+* Nicole Wei
+* Celina Xie
+* Jason Wang
+* Jason Zhao
+
+## User stories Iteration 3
+18. Anyone should be able to fast-forward time to see how time-based elements (loans, fees, and investments) evolve over days. (Jason Zhao)
+19. A bank customer should be able to apply for a fixed-interest loan that deducts the repayment amount from their account after a set number of days, and if the account lacks sufficient funds at that time, the account will be frozen. (Jason Zhao)
+
+## What user stories were completed this iteration?
+## Iteration 3 implementation notes (codebase changes)
+
+- **OOP refactor / file organization**: split the previously large menu logic into `CustomerMenu` and `AdminMenu`, with `MainMenu` acting as a thin orchestrator.
+- **Data storage folder**: customer/admin data is stored under `data/accounts/` (auto-migrates legacy root JSON files on startup).
+- **Time system (Day 1 + fast-forward)**: the app tracks a global `SystemTime` starting at Day 1 (persisted to `data/accounts/system_time.json`). The current day is displayed at login, and both customer/admin can fast-forward by entering a number of days.
+- **Tests reorganized**: unit tests were split into multiple files for clarity (`BankAccountCoreTest`, `CustomerFlowTest`, `AdminFlowTest`).
+
+## Is there anything that you implemented but doesn't currently work?
+Everything is currently working. 
+## What commands are needed to compile and run your code from the command line?
+bash runApp.sh
+
+---
+## [past iterations & other info]
 
 ## Top-Level Sitemap
 
@@ -89,13 +116,6 @@ Bank System
             └── Delete A Customer Account
 ```
 
-## Team Members:
-
-* Nicole Wei
-* Celina Xie
-* Jason Wang
-* Jason Zhao
-
 ## User stories Iteration 1
 
 1. A bank customer should be able to deposit into an existing account. (Shook)
@@ -117,27 +137,3 @@ Bank System
 15. A bank admin should be able to view a list of all account information, with data persisting across sessions. (Nicole Wei)
 16. A bank admin should be able to permanently delete an account from the bank’s database. (Jason Wang)
 17. A bank admin should be able to set up their login credentials (password and security questions) and log into their account using the correct password and answers. (Celina Xie)
-
-## User stories Iteration 3
-18. Anyone should be able to fast-forward time to see how time-based elements (loans, fees, and investments) evolve over days. (Jason Zhao)
-19. A bank customer should be able to apply for a fixed-interest loan that deducts the repayment amount from their account after a set number of days, and if the account lacks sufficient funds at that time, the account will be frozen. (Jason Zhao)
-
-
-
-## What user stories were completed this iteration?
-## Iteration 3 implementation notes (codebase changes)
-
-- **OOP refactor / file organization**: split the previously large menu logic into `CustomerMenu` and `AdminMenu`, with `MainMenu` acting as a thin orchestrator.
-- **Data storage folder**: customer/admin data is stored under `data/accounts/` (auto-migrates legacy root JSON files on startup).
-- **Time system (Day 1 + fast-forward)**: the app tracks a global `SystemTime` starting at Day 1 (persisted to `data/accounts/system_time.json`). The current day is displayed at login, and both customer/admin can fast-forward by entering a number of days.
-- **Tests reorganized**: unit tests were split into multiple files for clarity (`BankAccountCoreTest`, `CustomerFlowTest`, `AdminFlowTest`).
-
-
-
-## What user stories do you intend to complete next iteration?
-We will likely elaborate some details of the program based on real-life bank account functions and extend the program to non-bank functions (i.e. stock market) that would require customer and admin account information.
-
-## Is there anything that you implemented but doesn't currently work?
-Everything is currently working. 
-## What commands are needed to compile and run your code from the command line?
-bash runApp.sh
