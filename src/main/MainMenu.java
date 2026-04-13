@@ -34,20 +34,20 @@ public class MainMenu {
     }
 
     public MainMenu(String accountsFile) {
-        this.accountsFile = accountsFile;
+        this.accountsFile = StoragePaths.normalizeDataFilePath(accountsFile);
         this.accounts = new ArrayList<>();
         this.pendingLargeTransfers = new ArrayList<>();
         this.keyboardInput = new Scanner(System.in);
         this.prompts = new ConsolePrompts(keyboardInput);
-        if (StoragePaths.DEFAULT_ACCOUNTS_FILE.equals(accountsFile)) {
+        if (StoragePaths.DEFAULT_ACCOUNTS_FILE.equals(this.accountsFile)) {
             StoragePaths.migrateLegacyStorageIfNeeded();
         }
-        this.accountStorage = new AccountStorage(accountsFile);
-        this.adminStorage = new AdminStorage(StoragePaths.buildAdminFilePath(accountsFile));
-        this.timeStorage = new TimeStorage(StoragePaths.buildTimeFilePath(accountsFile));
+        this.accountStorage = new AccountStorage(this.accountsFile);
+        this.adminStorage = new AdminStorage(StoragePaths.buildAdminFilePath(this.accountsFile));
+        this.timeStorage = new TimeStorage(StoragePaths.buildTimeFilePath(this.accountsFile));
         this.systemTime = timeStorage.readOrDefault();
         // Requirement: each app restart resets time to Day 1.
-        this.systemTime.currentDay = 1;
+        this.systemTime.resetToDay1();
         this.timeStorage.write(systemTime);
         this.customerMenu = new CustomerMenu(accounts, pendingLargeTransfers, accountStorage, keyboardInput, systemTime, timeStorage);
         this.adminMenu = new AdminMenu(accounts, pendingLargeTransfers, accountStorage, adminStorage, keyboardInput, systemTime, timeStorage);

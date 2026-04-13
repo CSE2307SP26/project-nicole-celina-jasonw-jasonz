@@ -118,10 +118,12 @@ Bank System
 16. A bank admin should be able to permanently delete an account from the bank’s database. (Jason Wang)
 17. A bank admin should be able to set up their login credentials (password and security questions) and log into their account using the correct password and answers. (Celina Xie)
 
+## User stories Iteration 3
+18. Anyone should be able to fast-forward time to see how time-based elements (loans, fees, and investments) evolve over days.
+
 
 
 ## What user stories were completed this iteration?
-
 ## Iteration 3 implementation notes (codebase changes)
 
 - **OOP refactor / file organization**: split the previously large menu logic into `CustomerMenu` and `AdminMenu`, with `MainMenu` acting as a thin orchestrator.

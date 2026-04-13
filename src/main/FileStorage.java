@@ -17,9 +17,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 class StoragePaths {
-    static final String STORAGE_DIRECTORY = "data" + File.separator + "accounts";
+    static final String STORAGE_DIRECTORY = "account_info";
     static final String DEFAULT_ACCOUNTS_FILE = STORAGE_DIRECTORY + File.separator + "accounts.json";
     static final String DEFAULT_TIME_FILE = STORAGE_DIRECTORY + File.separator + "system_time.json";
+
+    static String normalizeDataFilePath(String filePath) {
+        File file = new File(filePath);
+        if (file.isAbsolute() || file.getParent() != null) {
+            return filePath;
+        }
+        return STORAGE_DIRECTORY + File.separator + file.getName();
+    }
 
     static String buildAdminFilePath(String accountFilePath) {
         File accountFile = new File(accountFilePath);
@@ -33,11 +41,13 @@ class StoragePaths {
 
     static String buildTimeFilePath(String accountFilePath) {
         File accountFile = new File(accountFilePath);
+        String accountFileName = accountFile.getName();
+        String timeFileName = "system_time_" + accountFileName;
         File parentDirectory = accountFile.getAbsoluteFile().getParentFile();
         if (parentDirectory == null) {
-            return "system_time.json";
+            return timeFileName;
         }
-        return new File(parentDirectory, "system_time.json").getPath();
+        return new File(parentDirectory, timeFileName).getPath();
     }
 
     static void ensureParentDirectoryExists(String filePath) {
@@ -50,6 +60,7 @@ class StoragePaths {
     static void migrateLegacyStorageIfNeeded() {
         migrateLegacyFileIfNeeded("accounts.json", DEFAULT_ACCOUNTS_FILE);
         migrateLegacyFileIfNeeded("admin_accounts.json", buildAdminFilePath(DEFAULT_ACCOUNTS_FILE));
+        migrateLegacyFileIfNeeded("system_time.json", DEFAULT_TIME_FILE);
     }
 
     private static void migrateLegacyFileIfNeeded(String legacyFilePath, String newFilePath) {
@@ -180,9 +191,16 @@ class SystemTime {
         return currentDay;
     }
 
+    void resetToDay1() {
+        currentDay = 1;
+    }
+
     void advanceDays(int days) {
         if (days <= 0) {
             throw new IllegalArgumentException("Days must be positive.");
+        }
+        if (currentDay > Integer.MAX_VALUE - days) {
+            throw new IllegalArgumentException("Day counter overflow.");
         }
         currentDay += days;
     }

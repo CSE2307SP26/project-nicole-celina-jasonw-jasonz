@@ -3,9 +3,11 @@
     "accountName": "jason",
     "accountPassword": "zhao",
     "isLoggedIn": true,
-    "balance": 0.0,
+    "balance": 100416.66666666667,
     "frozen": false,
-    "transactionHistory": [],
+    "transactionHistory": [
+      "Deposit: 100000.0"
+    ],
     "hasDebitCard": false,
     "debitCardFirstName": "",
     "debitCardLastName": "",
