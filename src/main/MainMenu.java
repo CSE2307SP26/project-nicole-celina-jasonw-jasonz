@@ -787,6 +787,8 @@ public class MainMenu {
         runAdministratorFlow();
     }
 
+    //admin login and set up PR record
+
     public void initializeAccountsArrayList() {
         List<BankAccount> persisted = readAccountsFromFile();
         persisted.removeIf(acc -> acc.getAccountName().equals("defaultaccount"));
