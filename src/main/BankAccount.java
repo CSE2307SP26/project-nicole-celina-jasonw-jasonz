@@ -129,6 +129,8 @@ public class BankAccount {
         this.hasDebitCard = true;
     }
 
+//debit card PR record
+
     public void collectFee(double amount) {
         if (amount <= 0) {
             throw new IllegalArgumentException();
