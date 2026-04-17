@@ -7,7 +7,7 @@ import java.util.ArrayList;
 public class BankAccount {
     public static final double LOAN_FIXED_INTEREST_RATE = 0.05;
 
-    private final String accountName;
+    private String accountName;
     private String accountPassword;
     private boolean isLoggedIn;
     private double balance;
@@ -47,8 +47,16 @@ public class BankAccount {
         return accountName;
     }
 
+    public void setAccountName(String accountName) {
+        this.accountName = accountName;
+    }
+
     public String getAccountPassword() {
         return accountPassword;
+    }
+
+    public void setAccountPassword(String accountPassword) {
+        this.accountPassword = accountPassword;
     }
 
     public boolean isLoggedIn() {
@@ -210,12 +218,20 @@ public class BankAccount {
      * @return interest amount credited (0 if principal is not positive)
      */
     public double applyInterestPayment(double annualRatePercent, int monthsInPeriod) {
+        validateInterestPaymentInputs(annualRatePercent, monthsInPeriod);
+        return applyInterestIfPositivePrincipal(annualRatePercent, monthsInPeriod);
+    }
+
+    private void validateInterestPaymentInputs(double annualRatePercent, int monthsInPeriod) {
         if (annualRatePercent < 0) {
             throw new IllegalArgumentException();
         }
         if (monthsInPeriod <= 0) {
             throw new IllegalArgumentException();
         }
+    }
+
+    private double applyInterestIfPositivePrincipal(double annualRatePercent, int monthsInPeriod) {
         if (this.balance <= 0) {
             return 0;
         }
