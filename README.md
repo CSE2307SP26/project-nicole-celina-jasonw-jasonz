@@ -44,7 +44,7 @@ bash runApp.sh
 
 - Administrator Signup & Login
   - 1st time: create password & answers for 2 security questions
-  - 2nd time & later: enter password & answer for 1 randomly selected secruity question - Logged into Administrator Page
+  - 2nd time & later: enter password & answer for 1 randomly selected security question - Logged into Administrator Page
 
 
 - Customer Account Detail Page
@@ -52,9 +52,13 @@ bash runApp.sh
   - Withdraw
   - Check Balance
   - Transfer money (large transfers may require administrator approval)
+    - Complete transfer now
+    - Schedule transfer for a later day (funds must be sufficient on the scheduled day)
   - View transaction history
   - View debit card
+  - Update account credentials (username and/or password)
   - Close account
+  - Apply for a loan
 
 - Administrator Page
   - Dashboard
@@ -89,6 +93,11 @@ Bank System
 │           ├── Deposit
 │           ├── Withdraw
 │           ├── Transfer money
+│           │   ├── Complete transfer now (large transfers require admin approval)
+│           │   └── Schedule transfer for a later day
+│           │       ├── Select target account
+│           │       ├── Enter amount
+│           │       └── Enter number of days from today
 │           ├── View transaction history
 │           ├── View debit card
 │           │   ├── Link a debit card for 1st time (randomly generated card number)
@@ -97,6 +106,13 @@ Bank System
 │           │   │
 │           │   └── If already linked: show Cardholder Name, Card Number, and Linked bank account
 │           │
+│           ├── Update account credentials
+│           │   ├── Update username
+│           │   ├── Update password
+│           │   ├── Update both
+│           │   └── Cancel
+│           │
+│           ├── Apply for a loan
 │           └── Close account
 │
 └── Administrator
