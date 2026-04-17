@@ -39,19 +39,24 @@ public class MainMenu {
         this.pendingLargeTransfers = new ArrayList<>();
         this.keyboardInput = new Scanner(System.in);
         this.prompts = new ConsolePrompts(keyboardInput);
-        if (StoragePaths.DEFAULT_ACCOUNTS_FILE.equals(this.accountsFile)) {
-            StoragePaths.migrateLegacyStorageIfNeeded();
-        }
+        migrateLegacyStorageWhenUsingDefaultAccountsPath();
         this.accountStorage = new AccountStorage(this.accountsFile);
         this.adminStorage = new AdminStorage(StoragePaths.buildAdminFilePath(this.accountsFile));
         this.timeStorage = new TimeStorage(StoragePaths.buildTimeFilePath(this.accountsFile));
         this.systemTime = timeStorage.readOrDefault();
-        // Requirement: each app restart resets time to Day 1.
-        this.systemTime.resetToDay1();
+        this.systemTime.resetToDay1(); // Requirement: each app restart resets time to Day 1.
         this.timeStorage.write(systemTime);
-        this.customerMenu = new CustomerMenu(accounts, pendingLargeTransfers, accountStorage, keyboardInput, systemTime, timeStorage);
-        this.adminMenu = new AdminMenu(accounts, pendingLargeTransfers, accountStorage, adminStorage, keyboardInput, systemTime, timeStorage);
+        this.customerMenu = new CustomerMenu(accounts, pendingLargeTransfers, accountStorage,
+                keyboardInput, systemTime, timeStorage);
+        this.adminMenu = new AdminMenu(accounts, pendingLargeTransfers, accountStorage, adminStorage,
+                keyboardInput, systemTime, timeStorage);
         customerMenu.initializeAccountsArrayList();
+    }
+
+    private void migrateLegacyStorageWhenUsingDefaultAccountsPath() {
+        if (StoragePaths.DEFAULT_ACCOUNTS_FILE.equals(this.accountsFile)) {
+            StoragePaths.migrateLegacyStorageIfNeeded();
+        }
     }
 
     public int getPendingLargeTransferCount() {
@@ -154,6 +159,14 @@ public class MainMenu {
         return customerMenu.recordNewAccount(newAccount);
     }
 
+    public boolean performUpdateUsername(BankAccount account, String newUsername) {
+        return customerMenu.performUpdateUsername(account, newUsername);
+    }
+
+    public boolean performUpdatePassword(BankAccount account, String newPassword, String confirmPassword) {
+        return customerMenu.performUpdatePassword(account, newPassword, confirmPassword);
+    }
+
     public void run() {
         initializeAccountsArrayList();
         int accountAccessMethod = -1;
@@ -247,43 +260,99 @@ interface TransferPrompts {
 final class TransferFlow {
     private TransferFlow() {}
 
-    static void performTransferWithdraw(
-            BankAccount from,
-            List<BankAccount> accounts,
-            List<PendingLargeTransfer> pendingLargeTransfers,
-            TransferPrompts prompts
-    ) {
+    static void performTransferWithdraw(BankAccount from, List<BankAccount> accounts,
+            List<PendingLargeTransfer> pendingLargeTransfers, TransferPrompts prompts) {
         System.out.println("--- Transfer money between accounts ---");
-        if (from.isFrozen()) {
-            System.out.println("This account is frozen. Transfers are not allowed.");
+        if (isFrozenTransferSource(from)) {
             return;
         }
         printAccountListNumbered(accounts);
-        double amount = prompts.promptNonNegativeAmount("Amount to transfer from [" + from.getAccountName() + "]: ");
-        if (amount == 0) {
-            System.out.println("No transfer made.");
+        Double amount = promptTransferAmountOrNull(from, prompts);
+        if (amount == null) {
             return;
         }
+        BankAccount to = promptValidTransferTargetOrNull(from, accounts, prompts);
+        if (to == null) {
+            return;
+        }
+        finishTransferAfterAmountAndTarget(from, to, amount, pendingLargeTransfers);
+    }
+
+    private static boolean isFrozenTransferSource(BankAccount from) {
+        if (from.isFrozen()) {
+            System.out.println("This account is frozen. Transfers are not allowed.");
+            return true;
+        }
+        return false;
+    }
+
+    private static Double promptTransferAmountOrNull(BankAccount from, TransferPrompts prompts) {
+        double amount = prompts.promptNonNegativeAmount(
+                "Amount to transfer from [" + from.getAccountName() + "]: ");
+        if (amount == 0) {
+            System.out.println("No transfer made.");
+            return null;
+        }
+        return amount;
+    }
+
+    private static BankAccount promptValidTransferTargetOrNull(
+            BankAccount from,
+            List<BankAccount> accounts,
+            TransferPrompts prompts
+    ) {
         int targetIdx = prompts.promptAccountIndex("Select the account to transfer this amount into: ");
         BankAccount to = accounts.get(targetIdx - 1);
         if (to == from) {
             System.out.println("You cannot transfer money to the same account.");
-            return;
+            return null;
         }
         if (to.isFrozen()) {
             System.out.println("The destination account is frozen. Transfers are not allowed.");
+            return null;
+        }
+        return to;
+    }
+
+    private static void finishTransferAfterAmountAndTarget(
+            BankAccount from,
+            BankAccount to,
+            double amount,
+            List<PendingLargeTransfer> pendingLargeTransfers
+    ) {
+        if (!hasSufficientBalanceForTransfer(from, amount)) {
             return;
         }
+        if (tryQueueLargeTransfer(from, to, amount, pendingLargeTransfers)) {
+            return;
+        }
+        completeImmediateTransfer(from, to, amount);
+    }
+
+    private static boolean hasSufficientBalanceForTransfer(BankAccount from, double amount) {
         if (from.getBalance() < amount) {
             System.out.println("Insufficient balance.");
-            return;
+            return false;
         }
-        if (amount > MainMenu.LARGE_TRANSFER_THRESHOLD) {
-            pendingLargeTransfers.add(new PendingLargeTransfer(from, to, amount));
-            System.out.println("This transfer exceeds $" + MainMenu.LARGE_TRANSFER_THRESHOLD
-                    + " and requires administrator approval. Your request has been submitted.");
-            return;
+        return true;
+    }
+
+    private static boolean tryQueueLargeTransfer(
+            BankAccount from,
+            BankAccount to,
+            double amount,
+            List<PendingLargeTransfer> pendingLargeTransfers
+    ) {
+        if (amount <= MainMenu.LARGE_TRANSFER_THRESHOLD) {
+            return false;
         }
+        pendingLargeTransfers.add(new PendingLargeTransfer(from, to, amount));
+        System.out.println("This transfer exceeds $" + MainMenu.LARGE_TRANSFER_THRESHOLD
+                + " and requires administrator approval. Your request has been submitted.");
+        return true;
+    }
+
+    private static void completeImmediateTransfer(BankAccount from, BankAccount to, double amount) {
         from.withdraw(amount);
         from.recordTransaction("Transfer Out", -amount);
         to.deposit(amount);

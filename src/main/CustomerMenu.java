@@ -43,10 +43,11 @@ class CustomerMenu {
         System.out.println("4. Transfer money");
         System.out.println("5. View transaction history");
         System.out.println("6. View debit card");
-        System.out.println("7. Close this account");
-        System.out.println("8. Apply for a loan");
-        System.out.println("9. Fast-forward time (days)");
-        System.out.println("10. Exit program");
+        System.out.println("7. Update account credentials");
+        System.out.println("8. Close this account");
+        System.out.println("9. Apply for a loan");
+        System.out.println("10. Fast-forward time (days)");
+        System.out.println("11. Exit program");
     }
 
     BankAccount authenticateCustomerLogin(String username, String password) {
@@ -129,9 +130,9 @@ class CustomerMenu {
 
     private void runAccountDetailLoop(BankAccount account) {
         int action = -1;
-        while (action != 10) {
+        while (action != 11) {
             displayAccountDetailMenu(account);
-            action = prompts.getUserSelection(10);
+            action = prompts.getUserSelection(11);
             if (!handleAccountDetailAction(action, account)) {
                 return;
             }
@@ -140,36 +141,68 @@ class CustomerMenu {
 
     private boolean handleAccountDetailAction(int action, BankAccount account) {
         switch (action) {
-            case 1:
-                performDeposit(account);
-                return true;
-            case 2:
-                performWithdrawal(account);
-                return true;
-            case 3:
-                System.out.println("Current balance: " + account.getBalance());
-                return true;
-            case 4:
-                performTransferWithdraw(account);
-                return true;
-            case 5:
-                performViewTransactionHistory(account);
-                return true;
-            case 6:
-                performViewDebitCard(account);
-                return true;
-            case 7:
-                performCloseAccount(account);
-                return false;
-            case 8:
-                applyLoanFlow(account);
-                return true;
-            case 9:
-                fastForwardTimeFlow();
-                return true;
-            default:
-                return true;
+            case 1: return runDepositAction(account);
+            case 2: return runWithdrawalAction(account);
+            case 3: return runCheckBalanceAction(account);
+            case 4: return runTransferAction(account);
+            case 5: return runTransactionHistoryAction(account);
+            case 6: return runDebitCardAction(account);
+            case 7: return runUpdateCredentialsAction(account);
+            case 8: return runCloseAccountAction(account);
+            case 9: return runLoanAction(account);
+            case 10: return runFastForwardAction();
+            default: return true;
         }
+    }
+
+    private boolean runDepositAction(BankAccount account) {
+        performDeposit(account);
+        return true;
+    }
+
+    private boolean runWithdrawalAction(BankAccount account) {
+        performWithdrawal(account);
+        return true;
+    }
+
+    private boolean runCheckBalanceAction(BankAccount account) {
+        System.out.println("Current balance: " + account.getBalance());
+        return true;
+    }
+
+    private boolean runTransferAction(BankAccount account) {
+        performTransferWithdraw(account);
+        return true;
+    }
+
+    private boolean runTransactionHistoryAction(BankAccount account) {
+        performViewTransactionHistory(account);
+        return true;
+    }
+
+    private boolean runDebitCardAction(BankAccount account) {
+        performViewDebitCard(account);
+        return true;
+    }
+
+    private boolean runUpdateCredentialsAction(BankAccount account) {
+        runUpdateCredentialsFlow(account);
+        return true;
+    }
+
+    private boolean runCloseAccountAction(BankAccount account) {
+        performCloseAccount(account);
+        return false;
+    }
+
+    private boolean runLoanAction(BankAccount account) {
+        applyLoanFlow(account);
+        return true;
+    }
+
+    private boolean runFastForwardAction() {
+        fastForwardTimeFlow();
+        return true;
     }
 
     private void applyLoanFlow(BankAccount account) {
@@ -188,6 +221,77 @@ class CustomerMenu {
         } catch (IllegalStateException | IllegalArgumentException e) {
             System.out.println(e.getMessage());
         }
+    }
+
+    private void runUpdateCredentialsFlow(BankAccount account) {
+        System.out.println();
+        System.out.println("--- Update account credentials ---");
+        System.out.println("1. Update username");
+        System.out.println("2. Update password");
+        System.out.println("3. Update both");
+        System.out.println("4. Cancel");
+        int choice = prompts.getUserSelection(4);
+        switch (choice) {
+            case 1: updateUsernameFlow(account); break;
+            case 2: updatePasswordFlow(account); break;
+            case 3: updateBothCredentialsFlow(account); break;
+            default: System.out.println("No changes made.");
+        }
+    }
+
+    private void updateBothCredentialsFlow(BankAccount account) {
+        if (updateUsernameFlow(account)) {
+            updatePasswordFlow(account);
+        }
+    }
+
+    private boolean updateUsernameFlow(BankAccount account) {
+        System.out.println("Enter new username: ");
+        String newUsername = keyboardInput.next();
+        return performUpdateUsername(account, newUsername);
+    }
+
+    private boolean updatePasswordFlow(BankAccount account) {
+        System.out.println("Enter new password: ");
+        String newPassword = keyboardInput.next();
+        System.out.println("Confirm new password: ");
+        String confirmPassword = keyboardInput.next();
+        return performUpdatePassword(account, newPassword, confirmPassword);
+    }
+
+    public boolean performUpdateUsername(BankAccount account, String newUsername) {
+        if (newUsername.equals(account.getAccountName())) {
+            System.out.println("New username matches the current username. No change made.");
+            return false;
+        }
+        if (isUsernameTakenByOther(newUsername, account)) {
+            System.out.println("This username is already taken. No change made.");
+            return false;
+        }
+        account.setAccountName(newUsername);
+        accountStorage.writeAccounts(accounts);
+        System.out.println("Username updated to: " + newUsername);
+        return true;
+    }
+
+    public boolean performUpdatePassword(BankAccount account, String newPassword, String confirmPassword) {
+        if (!newPassword.equals(confirmPassword)) {
+            System.out.println("Passwords do not match. No change made.");
+            return false;
+        }
+        account.setAccountPassword(newPassword);
+        accountStorage.writeAccounts(accounts);
+        System.out.println("Password updated successfully.");
+        return true;
+    }
+
+    private boolean isUsernameTakenByOther(String username, BankAccount current) {
+        for (BankAccount acc : accounts) {
+            if (acc != current && username.equals(acc.getAccountName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void fastForwardTimeFlow() {
@@ -216,8 +320,7 @@ class CustomerMenu {
     }
 
     private void performDeposit(BankAccount account) {
-        if (account.isFrozen()) {
-            System.out.println("This account is frozen. Deposits are not allowed.");
+        if (isFrozenBlockingDeposit(account)) {
             return;
         }
         double amount = prompts.promptNonNegativeAmount("How much would you like to deposit: ");
@@ -225,6 +328,18 @@ class CustomerMenu {
             System.out.println("No deposit made.");
             return;
         }
+        tryExecuteDeposit(account, amount);
+    }
+
+    private boolean isFrozenBlockingDeposit(BankAccount account) {
+        if (account.isFrozen()) {
+            System.out.println("This account is frozen. Deposits are not allowed.");
+            return true;
+        }
+        return false;
+    }
+
+    private void tryExecuteDeposit(BankAccount account, double amount) {
         try {
             account.deposit(amount);
             account.recordTransaction("Deposit", amount);
@@ -237,8 +352,7 @@ class CustomerMenu {
     }
 
     private void performWithdrawal(BankAccount account) {
-        if (account.isFrozen()) {
-            System.out.println("This account is frozen. Withdrawals are not allowed.");
+        if (isFrozenBlockingWithdrawal(account)) {
             return;
         }
         double amount = prompts.promptNonNegativeAmount("How much would you like to withdraw: ");
@@ -246,6 +360,18 @@ class CustomerMenu {
             System.out.println("No withdrawal made.");
             return;
         }
+        tryExecuteWithdrawal(account, amount);
+    }
+
+    private boolean isFrozenBlockingWithdrawal(BankAccount account) {
+        if (account.isFrozen()) {
+            System.out.println("This account is frozen. Withdrawals are not allowed.");
+            return true;
+        }
+        return false;
+    }
+
+    private void tryExecuteWithdrawal(BankAccount account, double amount) {
         try {
             account.withdraw(amount);
             account.recordTransaction("Withdraw", -amount);
@@ -284,58 +410,115 @@ class CustomerMenu {
     }
 
     private void runDebitCardSetupFlow(BankAccount account) {
-        System.out.println("This account currently does not have a debit card. You can choose to set one up.");
-        System.out.println("1. Set up debit card");
-        System.out.println("2. Back to account detail");
+        printDebitCardSetupMenu();
         int choice = prompts.getUserSelection(2);
         if (choice != 1) {
             return;
         }
+        if (!readDebitCardNamesAndCreate(account)) {
+            return;
+        }
+        System.out.println("---Your debit card has been set up---");
+        printDebitCardInfo(account);
+    }
+
+    private void printDebitCardSetupMenu() {
+        System.out.println("This account currently does not have a debit card. You can choose to set one up.");
+        System.out.println("1. Set up debit card");
+        System.out.println("2. Back to account detail");
+    }
+
+    private boolean readDebitCardNamesAndCreate(BankAccount account) {
         System.out.print("Enter first name for the debit card: ");
         String firstName = keyboardInput.nextLine().trim();
         System.out.print("Enter last name for the debit card: ");
         String lastName = keyboardInput.nextLine().trim();
         if (firstName.isEmpty() || lastName.isEmpty()) {
             System.out.println("First and last name cannot be empty.");
-            return;
+            return false;
         }
         account.createDebitCard(firstName, lastName);
-        System.out.println("---Your debit card has been set up---");
-        printDebitCardInfo(account);
+        return true;
+    }
+
+    private boolean isFrozenTransferSource(BankAccount account) {
+        if (account.isFrozen()) {
+            System.out.println("This account is frozen. Transfers are not allowed.");
+            return true;
+        }
+        return false;
     }
 
     private void performTransferWithdraw(BankAccount account) {
         System.out.println("--- Transfer money between accounts ---");
-        if (account.isFrozen()) {
-            System.out.println("This account is frozen. Transfers are not allowed.");
+        if (isFrozenTransferSource(account)) {
             return;
         }
         printAccountListNumbered(accounts);
-        double amount = prompts.promptNonNegativeAmount("Amount to transfer from [" + account.getAccountName() + "]: ");
-        if (amount == 0) {
-            System.out.println("No transfer made.");
+        Double amount = promptTransferAmountOrNull(account);
+        if (amount == null) {
             return;
         }
+        BankAccount target = promptValidTransferTargetOrNull(account);
+        if (target == null) {
+            return;
+        }
+        finishTransferAfterAmountAndTarget(account, target, amount);
+    }
+
+    private void finishTransferAfterAmountAndTarget(BankAccount account, BankAccount target, double amount) {
+        if (!hasSufficientBalanceForTransfer(account, amount)) {
+            return;
+        }
+        if (tryQueueLargeTransfer(account, target, amount)) {
+            return;
+        }
+        completeImmediateTransfer(account, target, amount);
+    }
+
+    private Double promptTransferAmountOrNull(BankAccount account) {
+        double amount = prompts.promptNonNegativeAmount(
+                "Amount to transfer from [" + account.getAccountName() + "]: ");
+        if (amount == 0) {
+            System.out.println("No transfer made.");
+            return null;
+        }
+        return amount;
+    }
+
+    private BankAccount promptValidTransferTargetOrNull(BankAccount account) {
         int idx = promptAccountIndex("Select the account to transfer this amount into: ");
         BankAccount target = accounts.get(idx - 1);
         if (target == account) {
             System.out.println("You cannot transfer money to the same account.");
-            return;
+            return null;
         }
         if (target.isFrozen()) {
             System.out.println("The destination account is frozen. Transfers are not allowed.");
-            return;
+            return null;
         }
+        return target;
+    }
+
+    private boolean hasSufficientBalanceForTransfer(BankAccount account, double amount) {
         if (account.getBalance() < amount) {
             System.out.println("Insufficient balance.");
-            return;
+            return false;
         }
-        if (amount > MainMenu.LARGE_TRANSFER_THRESHOLD) {
-            pendingLargeTransfers.add(new PendingLargeTransfer(account, target, amount));
-            System.out.println("This transfer exceeds $" + MainMenu.LARGE_TRANSFER_THRESHOLD
-                    + " and requires administrator approval. Your request has been submitted.");
-            return;
+        return true;
+    }
+
+    private boolean tryQueueLargeTransfer(BankAccount account, BankAccount target, double amount) {
+        if (amount <= MainMenu.LARGE_TRANSFER_THRESHOLD) {
+            return false;
         }
+        pendingLargeTransfers.add(new PendingLargeTransfer(account, target, amount));
+        System.out.println("This transfer exceeds $" + MainMenu.LARGE_TRANSFER_THRESHOLD
+                + " and requires administrator approval. Your request has been submitted.");
+        return true;
+    }
+
+    private void completeImmediateTransfer(BankAccount account, BankAccount target, double amount) {
         try {
             account.withdraw(amount);
             account.recordTransaction("Transfer Out", -amount);

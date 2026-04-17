@@ -270,19 +270,34 @@ class AdminMenu {
     }
 
     private void performInterestPayment(BankAccount account) {
-        double principal = account.getBalance();
-        if (principal <= 0) {
-            System.out.println("No principal balance — no interest can accrue.");
+        if (!hasPositivePrincipalForInterest(account)) {
             return;
         }
-        System.out.println("Principal (current balance): " + principal);
-        System.out.println("Interest = principal × (annual rate % / 100) × (months / 12).");
-        double annualRate = prompts.promptNonNegativeAmount("Annual interest rate (% per year), e.g. 3 for 3%: ");
+        printInterestCalculationGuidance(account.getBalance());
+        double annualRate = prompts.promptNonNegativeAmount(
+                "Annual interest rate (% per year), e.g. 3 for 3%: ");
         int months = prompts.promptPositiveInt("Number of months in this accrual period: ");
         if (annualRate == 0) {
             System.out.println("Rate is 0% — no interest credited.");
             return;
         }
+        applyInterestAndPersist(account, annualRate, months);
+    }
+
+    private boolean hasPositivePrincipalForInterest(BankAccount account) {
+        if (account.getBalance() <= 0) {
+            System.out.println("No principal balance — no interest can accrue.");
+            return false;
+        }
+        return true;
+    }
+
+    private void printInterestCalculationGuidance(double principal) {
+        System.out.println("Principal (current balance): " + principal);
+        System.out.println("Interest = principal × (annual rate % / 100) × (months / 12).");
+    }
+
+    private void applyInterestAndPersist(BankAccount account, double annualRate, int months) {
         try {
             double credited = account.applyInterestPayment(annualRate, months);
             persistAccounts();
@@ -315,8 +330,7 @@ class AdminMenu {
 
     private void runPendingLargeTransfersReview() {
         while (true) {
-            if (pendingLargeTransfers.isEmpty()) {
-                System.out.println("No pending large transfer requests.");
+            if (exitReviewIfPendingQueueEmpty()) {
                 return;
             }
             int idx = promptPendingTransferIndex();
@@ -324,15 +338,31 @@ class AdminMenu {
                 return;
             }
             PendingLargeTransfer selected = pendingLargeTransfers.get(idx);
-            System.out.println("1. Approve");
-            System.out.println("2. Deny");
-            System.out.println("3. Cancel");
-            int action = prompts.getUserSelection(3);
-            if (action == 1) {
-                approvePendingLargeTransfer(selected);
-            } else if (action == 2) {
-                denyPendingLargeTransfer(selected);
-            }
+            dispatchPendingTransferAdminAction(selected);
+        }
+    }
+
+    private boolean exitReviewIfPendingQueueEmpty() {
+        if (pendingLargeTransfers.isEmpty()) {
+            System.out.println("No pending large transfer requests.");
+            return true;
+        }
+        return false;
+    }
+
+    private void printApproveDenyCancelMenu() {
+        System.out.println("1. Approve");
+        System.out.println("2. Deny");
+        System.out.println("3. Cancel");
+    }
+
+    private void dispatchPendingTransferAdminAction(PendingLargeTransfer selected) {
+        printApproveDenyCancelMenu();
+        int action = prompts.getUserSelection(3);
+        if (action == 1) {
+            approvePendingLargeTransfer(selected);
+        } else if (action == 2) {
+            denyPendingLargeTransfer(selected);
         }
     }
 
@@ -355,19 +385,44 @@ class AdminMenu {
 
     private void approvePendingLargeTransfer(PendingLargeTransfer p) {
         int idx = pendingLargeTransfers.indexOf(p);
+        if (!isStillPendingTransferIndex(idx)) {
+            return;
+        }
+        if (hasFrozenAccountInPendingTransfer(p)) {
+            return;
+        }
+        if (removePendingTransferIfInsufficientBalance(p, idx)) {
+            return;
+        }
+        completeApprovedLargeTransferSafely(p);
+    }
+
+    private boolean isStillPendingTransferIndex(int idx) {
         if (idx < 0) {
             System.out.println("That request is no longer pending.");
-            return;
+            return false;
         }
+        return true;
+    }
+
+    private boolean hasFrozenAccountInPendingTransfer(PendingLargeTransfer p) {
         if (p.from.isFrozen() || p.to.isFrozen()) {
             System.out.println("Cannot approve: one or both accounts are frozen.");
-            return;
+            return true;
         }
+        return false;
+    }
+
+    private boolean removePendingTransferIfInsufficientBalance(PendingLargeTransfer p, int idx) {
         if (p.from.getBalance() < p.amount) {
             System.out.println("Cannot approve: insufficient balance. Request removed.");
             pendingLargeTransfers.remove(idx);
-            return;
+            return true;
         }
+        return false;
+    }
+
+    private void completeApprovedLargeTransferSafely(PendingLargeTransfer p) {
         try {
             p.from.withdraw(p.amount);
             p.from.recordTransaction("Transfer Out", -p.amount);

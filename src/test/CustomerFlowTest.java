@@ -247,6 +247,98 @@ public class CustomerFlowTest {
         }
     }
 
+    // feature: update account credentials (username and/or password)
+    @Nested
+    class UpdateCredentialsTests {
+        @TempDir
+        Path tempDir;
+
+        private MainMenu makeMenuWithAlice() {
+            MainMenu menu = new MainMenu(tempDir.resolve("accounts.json").toString());
+            menu.recordNewAccount(new BankAccount("alice", "oldpass"));
+            return menu;
+        }
+
+        private BankAccount aliceOf(MainMenu menu) {
+            return menu.getAccounts().stream()
+                    .filter(a -> a.getAccountName().equals("alice"))
+                    .findFirst().orElseThrow();
+        }
+
+        @Test
+        void testUpdateUsernameChangesAccountName() {
+            MainMenu menu = makeMenuWithAlice();
+            BankAccount alice = aliceOf(menu);
+            assertTrue(menu.performUpdateUsername(alice, "alice2"));
+            assertEquals("alice2", alice.getAccountName());
+        }
+
+        @Test
+        void testUpdateUsernameRejectsDuplicate() {
+            MainMenu menu = makeMenuWithAlice();
+            menu.recordNewAccount(new BankAccount("bob", "bobpass"));
+            BankAccount alice = aliceOf(menu);
+            assertFalse(menu.performUpdateUsername(alice, "bob"));
+            assertEquals("alice", alice.getAccountName());
+        }
+
+        @Test
+        void testUpdateUsernameRejectsSameName() {
+            MainMenu menu = makeMenuWithAlice();
+            BankAccount alice = aliceOf(menu);
+            assertFalse(menu.performUpdateUsername(alice, "alice"));
+        }
+
+        @Test
+        void testUpdateUsernamePersistsAcrossSessions() {
+            String file = tempDir.resolve("accounts.json").toString();
+            MainMenu menu1 = new MainMenu(file);
+            menu1.recordNewAccount(new BankAccount("alice", "oldpass"));
+            menu1.performUpdateUsername(aliceOf(menu1), "alice2");
+            MainMenu menu2 = new MainMenu(file);
+            assertTrue(menu2.getAccounts().stream()
+                    .anyMatch(a -> a.getAccountName().equals("alice2")));
+            assertFalse(menu2.getAccounts().stream()
+                    .anyMatch(a -> a.getAccountName().equals("alice")));
+        }
+
+        @Test
+        void testUpdatePasswordChangesPassword() {
+            MainMenu menu = makeMenuWithAlice();
+            BankAccount alice = aliceOf(menu);
+            assertTrue(menu.performUpdatePassword(alice, "newpass", "newpass"));
+            assertEquals("newpass", alice.getAccountPassword());
+        }
+
+        @Test
+        void testUpdatePasswordRejectsMismatch() {
+            MainMenu menu = makeMenuWithAlice();
+            BankAccount alice = aliceOf(menu);
+            assertFalse(menu.performUpdatePassword(alice, "newpass", "typo"));
+            assertEquals("oldpass", alice.getAccountPassword());
+        }
+
+        @Test
+        void testUpdatePasswordPersistsAcrossSessions() {
+            String file = tempDir.resolve("accounts.json").toString();
+            MainMenu menu1 = new MainMenu(file);
+            menu1.recordNewAccount(new BankAccount("alice", "oldpass"));
+            menu1.performUpdatePassword(aliceOf(menu1), "newpass", "newpass");
+            MainMenu menu2 = new MainMenu(file);
+            assertEquals("newpass", aliceOf(menu2).getAccountPassword());
+        }
+
+        @Test
+        void testCanLoginWithUpdatedCredentials() {
+            MainMenu menu = makeMenuWithAlice();
+            BankAccount alice = aliceOf(menu);
+            menu.performUpdateUsername(alice, "alice2");
+            menu.performUpdatePassword(alice, "newpass", "newpass");
+            assertEquals(alice, menu.authenticateCustomerLogin("alice2", "newpass"));
+            assertEquals(null, menu.authenticateCustomerLogin("alice", "oldpass"));
+        }
+    }
+
     // runCustomerLogInFlow tests (pure auth method)
     @Test
     void testAuthenticateCustomerSuccess() {
