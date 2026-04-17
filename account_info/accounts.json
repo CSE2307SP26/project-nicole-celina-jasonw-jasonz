@@ -3,11 +3,19 @@
     "accountName": "wei",
     "accountPassword": "www",
     "isLoggedIn": true,
-    "balance": 4.0,
+    "balance": 0.0,
     "frozen": false,
     "transactionHistory": [
       "Transfer In: 1.0",
-      "Transfer In: 3.0"
+      "Transfer In: 3.0",
+      "Deposit: 1000.0",
+      "Scheduled Transfer Out: -200.0",
+      "Scheduled Transfer Out: -100.0",
+      "Scheduled Transfer Out: -10.0",
+      "Withdraw: -600.0",
+      "Withdraw: -94.0",
+      "Deposit: 100.0",
+      "Scheduled Transfer Out: -100.0"
     ],
     "hasDebitCard": false,
     "debitCardFirstName": "",
@@ -22,10 +30,12 @@
     "accountName": "c",
     "accountPassword": "cx",
     "isLoggedIn": true,
-    "balance": 2.0,
+    "balance": 302.0,
     "frozen": false,
     "transactionHistory": [
-      "Transfer In: 2.0"
+      "Transfer In: 2.0",
+      "Scheduled Transfer In: 200.0",
+      "Scheduled Transfer In: 100.0"
     ],
     "hasDebitCard": false,
     "debitCardFirstName": "",
@@ -40,13 +50,14 @@
     "accountName": "jason",
     "accountPassword": "zhao",
     "isLoggedIn": true,
-    "balance": 99.5,
+    "balance": 199.5,
     "frozen": false,
     "transactionHistory": [
       "Loan Disbursed: 100.0",
       "Loan Default - Account Frozen: 0.0",
       "Loan Disbursed: 10.0",
-      "Loan Repaid: -10.5"
+      "Loan Repaid: -10.5",
+      "Scheduled Transfer In: 100.0"
     ],
     "hasDebitCard": false,
     "debitCardFirstName": "",

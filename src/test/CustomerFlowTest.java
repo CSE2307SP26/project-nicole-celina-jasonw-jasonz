@@ -339,6 +339,132 @@ public class CustomerFlowTest {
         }
     }
 
+    // feature: schedule transfers for a future day
+    @Nested
+    class ScheduledTransferTests {
+        @TempDir
+        Path tempDir;
+
+        private MainMenu freshMenu() {
+            return new MainMenu(tempDir.resolve("accounts.json").toString());
+        }
+
+        private BankAccount addFundedAccount(MainMenu menu, String name, double funds) {
+            BankAccount a = new BankAccount(name, "pw");
+            if (funds > 0) {
+                a.deposit(funds);
+            }
+            menu.getAccounts().add(a);
+            return a;
+        }
+
+        @Test
+        void testScheduleDoesNotDebitSourceImmediately() {
+            MainMenu menu = freshMenu();
+            BankAccount src = addFundedAccount(menu, "src", 500);
+            BankAccount dst = addFundedAccount(menu, "dst", 0);
+            assertTrue(menu.scheduleTransfer(src, dst, 100, 3));
+            assertEquals(500, src.getBalance(), 0.001);
+            assertEquals(0, dst.getBalance(), 0.001);
+            assertEquals(1, menu.getScheduledTransferCount());
+        }
+
+        @Test
+        void testScheduleIncrementsCountPerRequest() {
+            MainMenu menu = freshMenu();
+            BankAccount src = addFundedAccount(menu, "src", 500);
+            BankAccount dst = addFundedAccount(menu, "dst", 0);
+            menu.scheduleTransfer(src, dst, 50, 2);
+            menu.scheduleTransfer(src, dst, 75, 4);
+            assertEquals(2, menu.getScheduledTransferCount());
+            assertEquals(500, src.getBalance(), 0.001);
+        }
+
+        @Test
+        void testAdvanceBeforeScheduledDayDoesNotExecute() {
+            MainMenu menu = freshMenu();
+            BankAccount src = addFundedAccount(menu, "src", 500);
+            BankAccount dst = addFundedAccount(menu, "dst", 0);
+            menu.scheduleTransfer(src, dst, 100, 5);
+            menu.advanceDaysAndProcess(3);
+            assertEquals(500, src.getBalance(), 0.001);
+            assertEquals(0, dst.getBalance(), 0.001);
+            assertEquals(1, menu.getScheduledTransferCount());
+        }
+
+        @Test
+        void testAdvancePastScheduledDayExecutesTransfer() {
+            MainMenu menu = freshMenu();
+            BankAccount src = addFundedAccount(menu, "src", 500);
+            BankAccount dst = addFundedAccount(menu, "dst", 0);
+            menu.scheduleTransfer(src, dst, 100, 2);
+            menu.advanceDaysAndProcess(3);
+            assertEquals(400, src.getBalance(), 0.001);
+            assertEquals(100, dst.getBalance(), 0.001);
+            assertEquals(0, menu.getScheduledTransferCount());
+        }
+
+        @Test
+        void testAdvanceExactlyOnScheduledDayExecutesTransfer() {
+            MainMenu menu = freshMenu();
+            BankAccount src = addFundedAccount(menu, "src", 500);
+            BankAccount dst = addFundedAccount(menu, "dst", 0);
+            menu.scheduleTransfer(src, dst, 100, 2);
+            menu.advanceDaysAndProcess(2);
+            assertEquals(400, src.getBalance(), 0.001);
+            assertEquals(100, dst.getBalance(), 0.001);
+        }
+
+        @Test
+        void testScheduledTransferPersistsAcrossSessions() {
+            String file = tempDir.resolve("accounts.json").toString();
+            MainMenu menu1 = new MainMenu(file);
+            BankAccount src = addFundedAccount(menu1, "src", 500);
+            BankAccount dst = addFundedAccount(menu1, "dst", 0);
+            menu1.scheduleTransfer(src, dst, 100, 2);
+            MainMenu menu2 = new MainMenu(file);
+            assertEquals(1, menu2.getScheduledTransferCount());
+        }
+
+        @Test
+        void testScheduledSkippedWhenInsufficientFundsAtExecutionTime() {
+            MainMenu menu = freshMenu();
+            BankAccount src = addFundedAccount(menu, "src", 100);
+            BankAccount dst = addFundedAccount(menu, "dst", 0);
+            menu.scheduleTransfer(src, dst, 500, 2);
+            menu.advanceDaysAndProcess(3);
+            assertEquals(100, src.getBalance(), 0.001);
+            assertEquals(0, dst.getBalance(), 0.001);
+            assertEquals(0, menu.getScheduledTransferCount());
+        }
+
+        @Test
+        void testScheduledSkippedWhenSourceFrozenAtExecutionTime() {
+            MainMenu menu = freshMenu();
+            BankAccount src = addFundedAccount(menu, "src", 500);
+            BankAccount dst = addFundedAccount(menu, "dst", 0);
+            menu.scheduleTransfer(src, dst, 100, 2);
+            src.setFrozen(true);
+            menu.advanceDaysAndProcess(3);
+            assertEquals(500, src.getBalance(), 0.001);
+            assertEquals(0, dst.getBalance(), 0.001);
+            assertEquals(0, menu.getScheduledTransferCount());
+        }
+
+        @Test
+        void testScheduledSkippedWhenTargetFrozenAtExecutionTime() {
+            MainMenu menu = freshMenu();
+            BankAccount src = addFundedAccount(menu, "src", 500);
+            BankAccount dst = addFundedAccount(menu, "dst", 0);
+            menu.scheduleTransfer(src, dst, 100, 2);
+            dst.setFrozen(true);
+            menu.advanceDaysAndProcess(3);
+            assertEquals(500, src.getBalance(), 0.001);
+            assertEquals(0, dst.getBalance(), 0.001);
+            assertEquals(0, menu.getScheduledTransferCount());
+        }
+    }
+
     // runCustomerLogInFlow tests (pure auth method)
     @Test
     void testAuthenticateCustomerSuccess() {

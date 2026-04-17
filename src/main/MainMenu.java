@@ -25,6 +25,7 @@ public class MainMenu {
     private final AdminStorage adminStorage;
     private final TimeStorage timeStorage;
     private final SystemTime systemTime;
+    private final ScheduledTransferService scheduledTransferService;
     private final CustomerMenu customerMenu;
     private final AdminMenu adminMenu;
     private final ConsolePrompts prompts;
@@ -43,14 +44,21 @@ public class MainMenu {
         this.accountStorage = new AccountStorage(this.accountsFile);
         this.adminStorage = new AdminStorage(StoragePaths.buildAdminFilePath(this.accountsFile));
         this.timeStorage = new TimeStorage(StoragePaths.buildTimeFilePath(this.accountsFile));
-        this.systemTime = timeStorage.readOrDefault();
-        this.systemTime.resetToDay1(); // Requirement: each app restart resets time to Day 1.
-        this.timeStorage.write(systemTime);
+        this.scheduledTransferService = new ScheduledTransferService(
+                StoragePaths.buildScheduledTransferFilePath(this.accountsFile));
+        this.systemTime = initSystemTimeResetToDay1();
         this.customerMenu = new CustomerMenu(accounts, pendingLargeTransfers, accountStorage,
-                keyboardInput, systemTime, timeStorage);
+                keyboardInput, systemTime, timeStorage, scheduledTransferService);
         this.adminMenu = new AdminMenu(accounts, pendingLargeTransfers, accountStorage, adminStorage,
-                keyboardInput, systemTime, timeStorage);
+                keyboardInput, systemTime, timeStorage, scheduledTransferService);
         customerMenu.initializeAccountsArrayList();
+    }
+
+    private SystemTime initSystemTimeResetToDay1() {
+        SystemTime time = timeStorage.readOrDefault();
+        time.resetToDay1(); // Requirement: each app restart resets time to Day 1.
+        timeStorage.write(time);
+        return time;
     }
 
     private void migrateLegacyStorageWhenUsingDefaultAccountsPath() {
@@ -167,6 +175,24 @@ public class MainMenu {
         return customerMenu.performUpdatePassword(account, newPassword, confirmPassword);
     }
 
+    public boolean scheduleTransfer(BankAccount from, BankAccount to, double amount, int days) {
+        return customerMenu.queueScheduledTransfer(from, to, amount, days);
+    }
+
+    public int getScheduledTransferCount() {
+        return scheduledTransferService.count();
+    }
+
+    public int getCurrentDay() {
+        return systemTime.getCurrentDay();
+    }
+
+    public void advanceDaysAndProcess(int days) {
+        systemTime.advanceDays(days);
+        scheduledTransferService.processDue(systemTime.getCurrentDay(), accounts, accountStorage);
+        timeStorage.write(systemTime);
+    }
+
     public void run() {
         initializeAccountsArrayList();
         int accountAccessMethod = -1;
@@ -231,6 +257,11 @@ class ConsolePrompts {
         double amount = -1;
         while (amount < 0) {
             System.out.print(prompt);
+            if (!keyboardInput.hasNextDouble()) {
+                System.out.println("Invalid input. Please enter a number.");
+                keyboardInput.next();
+                continue;
+            }
             amount = keyboardInput.nextDouble();
             if (amount < 0) {
                 System.out.println("Amount must be non-negative.");
@@ -244,6 +275,11 @@ class ConsolePrompts {
         int n = 0;
         while (n <= 0) {
             System.out.print(prompt);
+            if (!keyboardInput.hasNextInt()) {
+                System.out.println("Invalid input. Please enter a whole number.");
+                keyboardInput.next();
+                continue;
+            }
             n = keyboardInput.nextInt();
             keyboardInput.nextLine();
         }
