@@ -15,6 +15,7 @@ class AdminMenu {
     private final ConsolePrompts prompts;
     private final SystemTime systemTime;
     private final TimeStorage timeStorage;
+    private final ScheduledTransferService scheduledTransferService;
 
     AdminMenu(
             List<BankAccount> accounts,
@@ -23,7 +24,8 @@ class AdminMenu {
             AdminStorage adminStorage,
             Scanner keyboardInput,
             SystemTime systemTime,
-            TimeStorage timeStorage
+            TimeStorage timeStorage,
+            ScheduledTransferService scheduledTransferService
     ) {
         this.accounts = accounts;
         this.pendingLargeTransfers = pendingLargeTransfers;
@@ -33,6 +35,7 @@ class AdminMenu {
         this.prompts = new ConsolePrompts(keyboardInput);
         this.systemTime = systemTime;
         this.timeStorage = timeStorage;
+        this.scheduledTransferService = scheduledTransferService;
     }
 
     void runAdminLoginFlow() {
@@ -179,6 +182,7 @@ class AdminMenu {
         try {
             systemTime.advanceDays(days);
             processDueLoansForAllAccounts();
+            scheduledTransferService.processDue(systemTime.getCurrentDay(), accounts, accountStorage);
             timeStorage.write(systemTime);
             System.out.println("Time advanced. Current day is now Day " + systemTime.getCurrentDay());
         } catch (IllegalArgumentException e) {

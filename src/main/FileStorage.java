@@ -50,6 +50,16 @@ class StoragePaths {
         return new File(parentDirectory, timeFileName).getPath();
     }
 
+    static String buildScheduledTransferFilePath(String accountFilePath) {
+        File accountFile = new File(accountFilePath);
+        String scheduledFileName = "scheduled_transfers_" + accountFile.getName();
+        File parentDirectory = accountFile.getAbsoluteFile().getParentFile();
+        if (parentDirectory == null) {
+            return scheduledFileName;
+        }
+        return new File(parentDirectory, scheduledFileName).getPath();
+    }
+
     static void ensureParentDirectoryExists(String filePath) {
         File parentDirectory = new File(filePath).getAbsoluteFile().getParentFile();
         if (parentDirectory != null && !parentDirectory.exists()) {
@@ -203,6 +213,142 @@ class SystemTime {
             throw new IllegalArgumentException("Day counter overflow.");
         }
         currentDay += days;
+    }
+}
+
+class ScheduledTransfer {
+    String fromAccountName;
+    String toAccountName;
+    double amount;
+    int scheduledDay;
+
+    ScheduledTransfer(String fromAccountName, String toAccountName, double amount, int scheduledDay) {
+        this.fromAccountName = fromAccountName;
+        this.toAccountName = toAccountName;
+        this.amount = amount;
+        this.scheduledDay = scheduledDay;
+    }
+}
+
+class ScheduledTransferStorage {
+    private final String filePath;
+
+    ScheduledTransferStorage(String filePath) {
+        this.filePath = filePath;
+    }
+
+    List<ScheduledTransfer> read() {
+        StoragePaths.ensureParentDirectoryExists(filePath);
+        File file = new File(filePath);
+        if (!file.exists() || file.length() == 0) {
+            return new ArrayList<>();
+        }
+        return readFromFile(file);
+    }
+
+    private List<ScheduledTransfer> readFromFile(File file) {
+        Type listType = new TypeToken<List<ScheduledTransfer>>(){}.getType();
+        try (FileReader reader = new FileReader(file)) {
+            List<ScheduledTransfer> result = new Gson().fromJson(reader, listType);
+            return result != null ? result : new ArrayList<>();
+        } catch (IOException e) {
+            System.out.println("Error reading scheduled transfers file.");
+            return new ArrayList<>();
+        }
+    }
+
+    void write(List<ScheduledTransfer> list) {
+        StoragePaths.ensureParentDirectoryExists(filePath);
+        try (FileWriter writer = new FileWriter(filePath)) {
+            new GsonBuilder().setPrettyPrinting().create().toJson(list, writer);
+        } catch (IOException e) {
+            System.out.println("Error writing scheduled transfers file.");
+        }
+    }
+}
+
+class ScheduledTransferService {
+    private final List<ScheduledTransfer> scheduled;
+    private final ScheduledTransferStorage storage;
+
+    ScheduledTransferService(String filePath) {
+        this.storage = new ScheduledTransferStorage(filePath);
+        this.scheduled = new ArrayList<>(storage.read());
+    }
+
+    int count() {
+        return scheduled.size();
+    }
+
+    List<ScheduledTransfer> getAll() {
+        return scheduled;
+    }
+
+    void schedule(ScheduledTransfer transfer) {
+        scheduled.add(transfer);
+        storage.write(scheduled);
+    }
+
+    int processDue(int currentDay, List<BankAccount> accounts, AccountStorage accountStorage) {
+        List<ScheduledTransfer> due = collectDue(currentDay);
+        int executed = 0;
+        for (ScheduledTransfer t : due) {
+            if (executeScheduled(t, accounts)) {
+                executed++;
+            }
+        }
+        scheduled.removeAll(due);
+        storage.write(scheduled);
+        if (!due.isEmpty()) {
+            accountStorage.writeAccounts(accounts);
+        }
+        return executed;
+    }
+
+    private List<ScheduledTransfer> collectDue(int currentDay) {
+        List<ScheduledTransfer> due = new ArrayList<>();
+        for (ScheduledTransfer t : scheduled) {
+            if (t.scheduledDay <= currentDay) {
+                due.add(t);
+            }
+        }
+        return due;
+    }
+
+    private boolean executeScheduled(ScheduledTransfer t, List<BankAccount> accounts) {
+        BankAccount from = findAccount(t.fromAccountName, accounts);
+        BankAccount to = findAccount(t.toAccountName, accounts);
+        if (!canExecuteScheduled(t, from, to)) {
+            printFailedScheduled(t);
+            return false;
+        }
+        from.withdraw(t.amount);
+        from.recordTransaction("Scheduled Transfer Out", -t.amount);
+        to.deposit(t.amount);
+        to.recordTransaction("Scheduled Transfer In", t.amount);
+        System.out.println("Scheduled transfer executed on Day " + t.scheduledDay + ": "
+                + t.fromAccountName + " -> " + t.toAccountName + " for " + t.amount + ".");
+        return true;
+    }
+
+    private boolean canExecuteScheduled(ScheduledTransfer t, BankAccount from, BankAccount to) {
+        return from != null && to != null && !from.isFrozen() && !to.isFrozen()
+                && from.getBalance() >= t.amount;
+    }
+
+    private void printFailedScheduled(ScheduledTransfer t) {
+        System.out.println("Scheduled transfer from " + t.fromAccountName + " to " + t.toAccountName
+                + " for " + t.amount + " (Day " + t.scheduledDay + ") could not be executed: "
+                + "insufficient funds or account unavailable.");
+    }
+
+    private BankAccount findAccount(String name, List<BankAccount> accounts) {
+        for (BankAccount a : accounts) {
+            if (a.getAccountName().equals(name)) {
+                return a;
+            }
+        }
+        return null;
     }
 }
 

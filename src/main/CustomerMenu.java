@@ -12,6 +12,7 @@ class CustomerMenu {
     private final ConsolePrompts prompts;
     private final SystemTime systemTime;
     private final TimeStorage timeStorage;
+    private final ScheduledTransferService scheduledTransferService;
 
     CustomerMenu(
             List<BankAccount> accounts,
@@ -19,7 +20,8 @@ class CustomerMenu {
             AccountStorage accountStorage,
             Scanner keyboardInput,
             SystemTime systemTime,
-            TimeStorage timeStorage
+            TimeStorage timeStorage,
+            ScheduledTransferService scheduledTransferService
     ) {
         this.accounts = accounts;
         this.pendingLargeTransfers = pendingLargeTransfers;
@@ -28,6 +30,7 @@ class CustomerMenu {
         this.prompts = new ConsolePrompts(keyboardInput);
         this.systemTime = systemTime;
         this.timeStorage = timeStorage;
+        this.scheduledTransferService = scheduledTransferService;
     }
 
     void displayAccountDetailMenu(BankAccount account) {
@@ -299,6 +302,7 @@ class CustomerMenu {
         try {
             systemTime.advanceDays(days);
             processDueLoansForAllAccounts();
+            scheduledTransferService.processDue(systemTime.getCurrentDay(), accounts, accountStorage);
             timeStorage.write(systemTime);
             System.out.println("Time advanced. Current day is now Day " + systemTime.getCurrentDay());
         } catch (IllegalArgumentException e) {
@@ -454,6 +458,22 @@ class CustomerMenu {
         if (isFrozenTransferSource(account)) {
             return;
         }
+        int timingChoice = promptTransferTiming();
+        if (timingChoice == 1) {
+            runImmediateTransferFlow(account);
+        } else {
+            runScheduledTransferFlow(account);
+        }
+    }
+
+    private int promptTransferTiming() {
+        System.out.println("When would you like to complete this transfer?");
+        System.out.println("1. Complete transfer now");
+        System.out.println("2. Schedule transfer for a later day");
+        return prompts.getUserSelection(2);
+    }
+
+    private void runImmediateTransferFlow(BankAccount account) {
         printAccountListNumbered(accounts);
         Double amount = promptTransferAmountOrNull(account);
         if (amount == null) {
@@ -464,6 +484,30 @@ class CustomerMenu {
             return;
         }
         finishTransferAfterAmountAndTarget(account, target, amount);
+    }
+
+    private void runScheduledTransferFlow(BankAccount account) {
+        printAccountListNumbered(accounts);
+        Double amount = promptTransferAmountOrNull(account);
+        if (amount == null) {
+            return;
+        }
+        BankAccount target = promptValidTransferTargetOrNull(account);
+        if (target == null) {
+            return;
+        }
+        int days = prompts.promptPositiveInt("Schedule transfer how many days from today: ");
+        queueScheduledTransfer(account, target, amount, days);
+    }
+
+    public boolean queueScheduledTransfer(BankAccount from, BankAccount to, double amount, int days) {
+        int scheduledDay = systemTime.getCurrentDay() + days;
+        scheduledTransferService.schedule(new ScheduledTransfer(
+                from.getAccountName(), to.getAccountName(), amount, scheduledDay));
+        System.out.println("Transfer of " + amount + " to " + to.getAccountName()
+                + " scheduled for Day " + scheduledDay
+                + ". Funds will be deducted from your account on that day (must be sufficient at that time).");
+        return true;
     }
 
     private void finishTransferAfterAmountAndTarget(BankAccount account, BankAccount target, double amount) {
