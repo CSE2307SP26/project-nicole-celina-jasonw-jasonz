@@ -11,7 +11,7 @@
 18. Anyone should be able to fast-forward time to see how time-based elements (loans, fees, and investments) evolve over days. (Jason Zhao)
 19. A bank customer should be able to apply for a fixed-interest loan that deducts the repayment amount from their account after a set number of days, and if the account lacks sufficient funds at that time, the account will be frozen. (Jason Zhao)
 20. A bank customer should be able to update their account credentials (username and/or password) after logging in. (Nicole Wei)
-21. A bank customer should be able to schedule future transactions (e.g., transfers or payments on a specific date). (Nicole Wei)
+21. A bank customer should be able to schedule future transactions (transfers to a different account on a specific date). (Nicole Wei)
 
 ## What user stories were completed this iteration?
 ## Iteration 3 implementation notes (codebase changes)
