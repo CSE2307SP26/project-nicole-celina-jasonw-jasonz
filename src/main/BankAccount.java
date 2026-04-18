@@ -179,25 +179,28 @@ public class BankAccount {
 
     public void makeLoanRepayment(double amount, int currentDay) {
         if (!hasActiveLoan) {
-            throw new IllegalStateException("No active loan to repay.");
+            throw new IllegalStateException("You do not have an active loan.");
         }
-        if (amount <= 0) {
-            throw new IllegalArgumentException("Repayment amount must be positive.");
+        if (currentDay > activeLoanDueDay) {
+            throw new IllegalStateException("Loan is already overdue.");
         }
         if (isFrozen()) {
             throw new IllegalStateException("Account is frozen");
         }
-        if (currentDay > activeLoanDueDay) {
-            throw new IllegalStateException("Loan is overdue.");
+        if (amount <= 0) {
+            throw new IllegalArgumentException("Repayment amount must be positive.");
         }
         if (amount > balance) {
-            throw new IllegalStateException("Insufficient balance for repayment.");
+            throw new IllegalArgumentException("Insufficient balance");
         }
-        balance -= amount;
-        activeLoanRepaymentAmount -= amount;
-        recordTransaction("Loan Repayment", -amount);
-        if (activeLoanRepaymentAmount < 0.000001) {
-            activeLoanRepaymentAmount = 0;
+
+        double payment = Math.min(amount, activeLoanRepaymentAmount);
+
+        balance -= payment;
+        activeLoanRepaymentAmount -= payment;
+        recordTransaction("Loan Repayment", -payment);
+
+        if (activeLoanRepaymentAmount <= 0.000001) {
             clearActiveLoan();
             recordTransaction("Loan Fully Repaid", 0);
         }

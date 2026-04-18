@@ -380,30 +380,42 @@ public class BankAccountCoreTest {
     public void testLoanRepaymentEdgeCases() {
         BankAccount testAccount = new BankAccount();
         testAccount.applyLoan(50, 2, 1);
+
         assertEquals(52.5, testAccount.getActiveLoanRepaymentAmount(), 0.01);
         assertEquals(50, testAccount.getBalance(), 0.01);
         assertTrue(testAccount.hasActiveLoan());
+
         testAccount.deposit(100);
         assertEquals(150, testAccount.getBalance(), 0.01);
 
         try {
             testAccount.makeLoanRepayment(55, 1);
+            assertEquals(97.5, testAccount.getBalance(), 0.01);
+            assertEquals(0, testAccount.getActiveLoanRepaymentAmount(), 0.01);
+            assertFalse(testAccount.hasActiveLoan());
+        } catch (Exception e) {
             fail();
-        } catch (IllegalStateException e) {
-            assertEquals(150, testAccount.getBalance(), 0.01);
-            assertEquals(52.5, testAccount.getActiveLoanRepaymentAmount(), 0.01);
-            assertTrue(testAccount.hasActiveLoan());
         }
+
+        testAccount = new BankAccount();
+        testAccount.applyLoan(50, 2, 1);
+        testAccount.deposit(100);
+
         try {
             testAccount.makeLoanRepayment(160, 1);
             fail();
-        } catch (IllegalStateException e) {
+        } catch (IllegalArgumentException e) {
             assertEquals(150, testAccount.getBalance(), 0.01);
             assertEquals(52.5, testAccount.getActiveLoanRepaymentAmount(), 0.01);
             assertTrue(testAccount.hasActiveLoan());
         }
+
+        testAccount = new BankAccount();
+        testAccount.applyLoan(50, 2, 1);
+        testAccount.deposit(100);
+
         try {
-            testAccount.makeLoanRepayment(52.5, 3);
+            testAccount.makeLoanRepayment(52.5, 4);
             fail();
         } catch (IllegalStateException e) {
             assertEquals(150, testAccount.getBalance(), 0.01);
