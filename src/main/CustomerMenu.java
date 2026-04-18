@@ -49,8 +49,9 @@ class CustomerMenu {
         System.out.println("7. Update account credentials");
         System.out.println("8. Close this account");
         System.out.println("9. Apply for a loan");
-        System.out.println("10. Fast-forward time (days)");
-        System.out.println("11. Exit program");
+        System.out.println("10. Repay due loan");
+        System.out.println("11. Fast-forward time (days)");
+        System.out.println("12. Exit program");
     }
 
     BankAccount authenticateCustomerLogin(String username, String password) {
@@ -153,7 +154,8 @@ class CustomerMenu {
             case 7: return runUpdateCredentialsAction(account);
             case 8: return runCloseAccountAction(account);
             case 9: return runLoanAction(account);
-            case 10: return runFastForwardAction();
+            case 10: return runRepayLoanAction(account);
+            case 11: return runFastForwardAction();
             default: return true;
         }
     }
@@ -202,6 +204,10 @@ class CustomerMenu {
         applyLoanFlow(account);
         return true;
     }
+    private boolean runRepayLoanAction(BankAccount account) {
+        performLoanRepayment(account);
+        return true;
+    }
 
     private boolean runFastForwardAction() {
         fastForwardTimeFlow();
@@ -221,6 +227,31 @@ class CustomerMenu {
             System.out.println("Loan approved at fixed interest rate: " + (BankAccount.LOAN_FIXED_INTEREST_RATE * 100) + "%");
             System.out.println("Repayment due on Day " + account.getActiveLoanDueDay()
                     + " for amount: " + account.getActiveLoanRepaymentAmount());
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    private void performLoanRepayment(BankAccount account) {
+        if (!account.hasActiveLoan()){
+            System.out.println("You do not have an active loan to repay.");
+            return;
+        }
+        System.out.println("Active loan repayment amount: " + account.getActiveLoanRepaymentAmount());
+        System.out.println("Repayment due on Day " + account.getActiveLoanDueDay());
+        double amount = prompts.promptNonNegativeAmount("Enter repayment amount: ");
+        if (amount == 0) {
+            System.out.println("No repayment made.");
+            return;
+        }
+        try {
+            account.makeLoanRepayment(amount, systemTime.getCurrentDay());
+            accountStorage.writeAccounts(accounts);
+            if (account.hasActiveLoan()){
+                System.out.println("Repayment successful. Remaining loan repayment amount: " + account.getActiveLoanRepaymentAmount());
+            } else {
+                System.out.println("Loan fully paid.");
+            }
         } catch (IllegalStateException | IllegalArgumentException e) {
             System.out.println(e.getMessage());
         }

@@ -177,9 +177,40 @@ public class BankAccount {
         recordTransaction("Loan Disbursed", amount);
     }
 
+    public void makeLoanRepayment(double amount, int currentDay) {
+        if (!hasActiveLoan) {
+            throw new IllegalStateException("No active loan to repay.");
+        }
+        if (amount <= 0) {
+            throw new IllegalArgumentException("Repayment amount must be positive.");
+        }
+        if (isFrozen()) {
+            throw new IllegalStateException("Account is frozen");
+        }
+        if (currentDay > activeLoanDueDay) {
+            throw new IllegalStateException("Loan is overdue.");
+        }
+        if (amount > balance) {
+            throw new IllegalStateException("Insufficient balance for repayment.");
+        }
+        balance -= amount;
+        activeLoanRepaymentAmount -= amount;
+        recordTransaction("Loan Repayment", -amount);
+        if (activeLoanRepaymentAmount < 0.000001) {
+            activeLoanRepaymentAmount = 0;
+            clearActiveLoan();
+            recordTransaction("Loan Fully Repaid", 0);
+        }
+    }
+
     public boolean processLoanIfDue(int currentDay) {
         if (!hasActiveLoan || currentDay < activeLoanDueDay) {
             return false;
+        }
+        if (activeLoanRepaymentAmount < 0.000001) {
+            clearActiveLoan();
+            recordTransaction("Loan Fully Repaid", 0);
+            return true;
         }
         if (balance >= activeLoanRepaymentAmount) {
             balance -= activeLoanRepaymentAmount;

@@ -1,7 +1,6 @@
 package test;
 
 import main.BankAccount;
-
 import java.util.List;
 
 import static org.junit.Assert.assertNotNull;
@@ -341,6 +340,103 @@ public class BankAccountCoreTest {
             assertEquals(50.0, testAccount.getBalance(), 0.01);
             assertTrue(testAccount.hasActiveLoan());
         }
+    }
+
+    @Test 
+    public void testLoanRepaymentBasics() {
+        BankAccount testAccount = new BankAccount();
+        try {
+            testAccount.makeLoanRepayment(10, 0);
+            fail();
+        } catch (IllegalStateException e) {
+            assertEquals(0, testAccount.getBalance(), 0.01);
+            assertFalse(testAccount.hasActiveLoan());
+        }
+        testAccount.applyLoan(50, 2, 1);
+        assertEquals(50, testAccount.getBalance(), 0.01);
+        assertEquals(52.5, testAccount.getActiveLoanRepaymentAmount(), 0.01);
+        testAccount.deposit(5);
+        assertEquals(55, testAccount.getBalance(), 0.01);
+        try {
+            testAccount.makeLoanRepayment(20, 1);
+            assertEquals(32.5, testAccount.getActiveLoanRepaymentAmount(), 0.01);
+            assertEquals(35, testAccount.getBalance(), 0.01);
+            assertTrue(testAccount.hasActiveLoan());
+        } catch (Exception e) {
+            fail();
+        }
+        try {
+            testAccount.makeLoanRepayment(32.5, 1);
+            assertEquals(0, testAccount.getActiveLoanRepaymentAmount(), 0.01);
+            assertFalse(testAccount.hasActiveLoan());
+            assertEquals(2.5, testAccount.getBalance(), 0.01);
+        } catch (Exception e) {
+            fail();
+        }
+
+    }
+
+    @Test
+    public void testLoanRepaymentEdgeCases() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.applyLoan(50, 2, 1);
+        assertEquals(52.5, testAccount.getActiveLoanRepaymentAmount(), 0.01);
+        assertEquals(50, testAccount.getBalance(), 0.01);
+        assertTrue(testAccount.hasActiveLoan());
+        testAccount.deposit(100);
+        assertEquals(150, testAccount.getBalance(), 0.01);
+
+        try {
+            testAccount.makeLoanRepayment(55, 1);
+            fail();
+        } catch (IllegalStateException e) {
+            assertEquals(150, testAccount.getBalance(), 0.01);
+            assertEquals(52.5, testAccount.getActiveLoanRepaymentAmount(), 0.01);
+            assertTrue(testAccount.hasActiveLoan());
+        }
+        try {
+            testAccount.makeLoanRepayment(160, 1);
+            fail();
+        } catch (IllegalStateException e) {
+            assertEquals(150, testAccount.getBalance(), 0.01);
+            assertEquals(52.5, testAccount.getActiveLoanRepaymentAmount(), 0.01);
+            assertTrue(testAccount.hasActiveLoan());
+        }
+        try {
+            testAccount.makeLoanRepayment(52.5, 3);
+            fail();
+        } catch (IllegalStateException e) {
+            assertEquals(150, testAccount.getBalance(), 0.01);
+            assertEquals(52.5, testAccount.getActiveLoanRepaymentAmount(), 0.01);
+            assertTrue(testAccount.hasActiveLoan());
+        }
+    }
+    @Test
+    public void testPartialLoanRepaymentThenDefaultOnDueDate() {
+        BankAccount testAccount = new BankAccount();
+
+        testAccount.applyLoan(50, 2, 1);
+
+        assertEquals(50, testAccount.getBalance(), 0.01);
+        assertEquals(52.5, testAccount.getActiveLoanRepaymentAmount(), 0.01);
+        assertEquals(3, testAccount.getActiveLoanDueDay());
+        assertTrue(testAccount.hasActiveLoan());
+        assertFalse(testAccount.isFrozen());
+
+        testAccount.makeLoanRepayment(20, 2);
+
+        assertEquals(30, testAccount.getBalance(), 0.01);
+        assertEquals(32.5, testAccount.getActiveLoanRepaymentAmount(), 0.01);
+        assertTrue(testAccount.hasActiveLoan());
+        assertFalse(testAccount.isFrozen());
+
+        boolean processed = testAccount.processLoanIfDue(3);
+
+        assertTrue(processed);
+        assertTrue(testAccount.isFrozen());
+        assertFalse(testAccount.hasActiveLoan());
+        assertEquals(30, testAccount.getBalance(), 0.01);
+        assertEquals(0, testAccount.getActiveLoanRepaymentAmount(), 0.01);
     }
 }
 
