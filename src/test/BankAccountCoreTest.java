@@ -313,10 +313,13 @@ public class BankAccountCoreTest {
         BankAccount testAccount = new BankAccount();
         testAccount.applyLoan(100.0, 2, 1); // Due day = 3, repayment = 105
         boolean processed = testAccount.processLoanIfDue(3);
+
         assertTrue(processed);
-        assertFalse(testAccount.hasActiveLoan());
+        assertTrue(testAccount.hasActiveLoan());
         assertTrue(testAccount.isFrozen());
         assertEquals(100.0, testAccount.getBalance(), 0.01);
+        assertEquals(115.5, testAccount.getActiveLoanRepaymentAmount(), 0.01);
+        assertTrue(testAccount.isLoanLatePenaltyApplied());
     }
 
     @Test
@@ -416,13 +419,14 @@ public class BankAccountCoreTest {
 
         try {
             testAccount.makeLoanRepayment(52.5, 4);
+            assertEquals(97.5, testAccount.getBalance(), 0.01);
+            assertEquals(0, testAccount.getActiveLoanRepaymentAmount(), 0.01);
+            assertFalse(testAccount.hasActiveLoan());
+        } catch (Exception e) {
             fail();
-        } catch (IllegalStateException e) {
-            assertEquals(150, testAccount.getBalance(), 0.01);
-            assertEquals(52.5, testAccount.getActiveLoanRepaymentAmount(), 0.01);
-            assertTrue(testAccount.hasActiveLoan());
         }
     }
+
     @Test
     public void testPartialLoanRepaymentThenDefaultOnDueDate() {
         BankAccount testAccount = new BankAccount();
@@ -446,9 +450,51 @@ public class BankAccountCoreTest {
 
         assertTrue(processed);
         assertTrue(testAccount.isFrozen());
-        assertFalse(testAccount.hasActiveLoan());
+        assertTrue(testAccount.hasActiveLoan());
         assertEquals(30, testAccount.getBalance(), 0.01);
-        assertEquals(0, testAccount.getActiveLoanRepaymentAmount(), 0.01);
+        assertEquals(35.75, testAccount.getActiveLoanRepaymentAmount(), 0.01);
+        assertTrue(testAccount.isLoanLatePenaltyApplied());
+    }
+
+    @Test
+    public void testLoanLatePenaltyAppliedOnlyOnce() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.applyLoan(100.0, 2, 1); // repayment = 105, due day = 3
+
+        boolean processedFirst = testAccount.processLoanIfDue(3);
+        assertTrue(processedFirst);
+        assertTrue(testAccount.hasActiveLoan());
+        assertTrue(testAccount.isFrozen());
+        assertEquals(115.5, testAccount.getActiveLoanRepaymentAmount(), 0.01);
+        assertTrue(testAccount.isLoanLatePenaltyApplied());
+
+        boolean processedSecond = testAccount.processLoanIfDue(4);
+        assertTrue(processedSecond);
+        assertEquals(115.5, testAccount.getActiveLoanRepaymentAmount(), 0.01);
+        assertTrue(testAccount.isLoanLatePenaltyApplied());
+    }
+
+    @Test
+    public void testOverdueRepaymentAllowedWhenFrozen() {
+        BankAccount testAccount = new BankAccount();
+        testAccount.applyLoan(50.0, 2, 1); // repayment = 52.5, due day = 3
+
+        boolean processed = testAccount.processLoanIfDue(3);
+        assertTrue(processed);
+        assertTrue(testAccount.isFrozen());
+        assertTrue(testAccount.hasActiveLoan());
+        assertEquals(57.75, testAccount.getActiveLoanRepaymentAmount(), 0.01);
+
+        // Balance is still 50 after default, so partial overdue repayment is possible
+        try {
+            testAccount.makeLoanRepayment(20.0, 4);
+            assertEquals(30.0, testAccount.getBalance(), 0.01);
+            assertEquals(37.75, testAccount.getActiveLoanRepaymentAmount(), 0.01);
+            assertTrue(testAccount.hasActiveLoan());
+            assertTrue(testAccount.isFrozen());
+        } catch (Exception e) {
+            fail();
+        }
     }
 }
 

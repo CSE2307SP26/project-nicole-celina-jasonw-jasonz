@@ -24,7 +24,8 @@
     "hasActiveLoan": false,
     "activeLoanPrincipal": 0.0,
     "activeLoanRepaymentAmount": 0.0,
-    "activeLoanDueDay": 0
+    "activeLoanDueDay": 0,
+    "loanLatePenaltyApplied": false
   },
   {
     "accountName": "c",
@@ -44,7 +45,8 @@
     "hasActiveLoan": false,
     "activeLoanPrincipal": 0.0,
     "activeLoanRepaymentAmount": 0.0,
-    "activeLoanDueDay": 0
+    "activeLoanDueDay": 0,
+    "loanLatePenaltyApplied": false
   },
   {
     "accountName": "jason",
@@ -66,6 +68,7 @@
     "hasActiveLoan": false,
     "activeLoanPrincipal": 0.0,
     "activeLoanRepaymentAmount": 0.0,
-    "activeLoanDueDay": 0
+    "activeLoanDueDay": 0,
+    "loanLatePenaltyApplied": false
   }
 ]

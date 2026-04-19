@@ -12,6 +12,8 @@
 19. A bank customer should be able to apply for a fixed-interest loan that deducts the repayment amount from their account after a set number of days, and if the account lacks sufficient funds at that time, the account will be frozen. (Jason Zhao)
 20. A bank customer should be able to update their account credentials (username and/or password) after logging in. (Nicole Wei)
 21. A bank customer should be able to schedule future transactions (transfers to a different account on a specific date). (Nicole Wei)
+22. A bank customer should be able to make partial loan repayments before due date. (Jason Wang)
+23. If a loan is not repaid by its due date, add a one-time penalty and freeze the account. While frozen, the customer can only repay the overdue balance; all other operations are blocked until admin unfreezes. (Jason Wang)
 
 ## What user stories were completed this iteration?
 ## Iteration 3 implementation notes (codebase changes)
@@ -22,7 +24,7 @@
 - **Tests reorganized**: unit tests were split into multiple files for clarity (`BankAccountCoreTest`, `CustomerFlowTest`, `AdminFlowTest`).
 
 ## Is there anything that you implemented but doesn't currently work?
-Everything is currently working. 
+Everything is working except that JUnit test cases can only be ran from cursor/terminal/script but not the "Testing" tool on the left bar of VSCode.
 ## What commands are needed to compile and run your code from the command line?
 bash runApp.sh
 
@@ -80,24 +82,26 @@ Bank System
 │   ├── Customer
 │   │   ├── Customer Login
 │   │   └── Customer Signup
-|   │
+│   │
 │   └── Administrator
-|       └── Signup (1st time) / Login
-│
+│       └── Signup (1st time) / Login
 │
 ├── Customer Dashboard
 │   ├── Signup: Create new username & password ——— Logged In ——— Account Detail
-|   └── Login: Enter existing username & password
+│   └── Login: Enter existing username & password
 │       └── Account Detail
 │           ├── Check Balance
 │           ├── Deposit
+│           │   └── If account is frozen: blocked
 │           ├── Withdraw
+│           │   └── If account is frozen: blocked
 │           ├── Transfer money
 │           │   ├── Complete transfer now (large transfers require admin approval)
 │           │   └── Schedule transfer for a later day
 │           │       ├── Select target account
 │           │       ├── Enter amount
 │           │       └── Enter number of days from today
+│           │   └── If account is frozen: blocked
 │           ├── View transaction history
 │           ├── View debit card
 │           │   ├── Link a debit card for 1st time (randomly generated card number)
@@ -113,6 +117,24 @@ Bank System
 │           │   └── Cancel
 │           │
 │           ├── Apply for a loan
+│           │   ├── Enter loan amount
+│           │   ├── Enter repayment due in number of days
+│           │   └── Loan is disbursed immediately with fixed interest
+│           │
+│           ├── Make loan repayment
+│           │   ├── View remaining loan repayment amount
+│           │   ├── Enter repayment amount
+│           │   ├── Partial repayment allowed
+│           │   ├── Full early repayment allowed
+│           │   └── If account is frozen due to overdue loan: repayment still allowed
+│           │
+│           ├── Loan overdue / default behavior
+│           │   ├── If repayment amount due cannot be covered on due day
+│           │   │   ├── Apply one-time overdue penalty
+│           │   │   ├── Freeze account
+│           │   │   └── Keep overdue loan active until repaid
+│           │   └── Overdue loan repayment remains allowed while other frozen actions stay blocked
+│           │
 │           └── Close account
 │
 └── Administrator
@@ -129,6 +151,8 @@ Bank System
             │           ├── Add Interest Payment
             │           ├── Freeze Account
             │           └── Unfreeze Account
+            │               └── Required to fully restore normal account actions after overdue-loan freeze
+            │
             ├── Review Pending Large Transfers: accept / deny / cancel
             ├── View customer account login info
             └── Delete A Customer Account

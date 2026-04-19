@@ -21,6 +21,8 @@ public class BankAccount {
     private double activeLoanPrincipal;
     private double activeLoanRepaymentAmount;
     private int activeLoanDueDay;
+    private static final double LOAN_LATE_PENALTY_RATE = 0.10;
+    private boolean loanLatePenaltyApplied;
 
     public BankAccount() {
         this("defaultaccount", "defaultpassword");
@@ -41,6 +43,7 @@ public class BankAccount {
         this.activeLoanPrincipal = 0;
         this.activeLoanRepaymentAmount = 0;
         this.activeLoanDueDay = 0;
+        this.loanLatePenaltyApplied = false;
     }
 
     public String getAccountName() {
@@ -155,6 +158,14 @@ public class BankAccount {
         return activeLoanRepaymentAmount;
     }
 
+    public boolean isLoanLatePenaltyApplied() {
+        return loanLatePenaltyApplied;
+    }
+
+    public boolean hasOverdueBalance() {
+        return hasActiveLoan && loanLatePenaltyApplied;
+    }
+
     public int getActiveLoanDueDay() {
         return activeLoanDueDay;
     }
@@ -173,6 +184,7 @@ public class BankAccount {
         this.activeLoanRepaymentAmount = amount * (1.0 + LOAN_FIXED_INTEREST_RATE);
         this.activeLoanDueDay = currentDay + repaymentDays;
         this.hasActiveLoan = true;
+        this.loanLatePenaltyApplied = false;
         this.balance += amount;
         recordTransaction("Loan Disbursed", amount);
     }
@@ -180,12 +192,6 @@ public class BankAccount {
     public void makeLoanRepayment(double amount, int currentDay) {
         if (!hasActiveLoan) {
             throw new IllegalStateException("You do not have an active loan.");
-        }
-        if (currentDay > activeLoanDueDay) {
-            throw new IllegalStateException("Loan is already overdue.");
-        }
-        if (isFrozen()) {
-            throw new IllegalStateException("Account is frozen");
         }
         if (amount <= 0) {
             throw new IllegalArgumentException("Repayment amount must be positive.");
@@ -210,7 +216,7 @@ public class BankAccount {
         if (!hasActiveLoan || currentDay < activeLoanDueDay) {
             return false;
         }
-        if (activeLoanRepaymentAmount < 0.000001) {
+        if (activeLoanRepaymentAmount <= 0.000001) {
             clearActiveLoan();
             recordTransaction("Loan Fully Repaid", 0);
             return true;
@@ -218,12 +224,22 @@ public class BankAccount {
         if (balance >= activeLoanRepaymentAmount) {
             balance -= activeLoanRepaymentAmount;
             recordTransaction("Loan Repaid", -activeLoanRepaymentAmount);
+            clearActiveLoan();
         } else {
+            applyLatePenaltyIfNeeded();
             setFrozen(true);
             recordTransaction("Loan Default - Account Frozen", 0);
         }
-        clearActiveLoan();
         return true;
+    }
+
+    private void applyLatePenaltyIfNeeded() {
+        if (!loanLatePenaltyApplied) {
+            double penalty = activeLoanRepaymentAmount * LOAN_LATE_PENALTY_RATE;
+            activeLoanRepaymentAmount += penalty;
+            loanLatePenaltyApplied = true;
+            recordTransaction("Loan Late Penalty", -penalty);
+        }
     }
 
     private void clearActiveLoan() {
@@ -231,6 +247,7 @@ public class BankAccount {
         this.activeLoanPrincipal = 0;
         this.activeLoanRepaymentAmount = 0;
         this.activeLoanDueDay = 0;
+        this.loanLatePenaltyApplied = false;
     }
 
     public void collectFee(double amount) {
