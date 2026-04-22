@@ -135,9 +135,9 @@ class CustomerMenu {
 
     private void runAccountDetailLoop(BankAccount account) {
         int action = -1;
-        while (action != 11) {
+        while (action != 12) {
             displayAccountDetailMenu(account);
-            action = prompts.getUserSelection(11);
+            action = prompts.getUserSelection(12);
             if (!handleAccountDetailAction(action, account)) {
                 return;
             }

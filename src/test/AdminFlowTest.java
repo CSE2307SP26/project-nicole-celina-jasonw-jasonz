@@ -187,10 +187,13 @@ public class AdminFlowTest {
         account.deposit(100);
         menu1.getAccounts().clear();
         menu1.recordNewAccount(account);
-        account.setMaintenanceFee(5, 1, menu1.getCurrentDay());
+        boolean maintenanceFeeSaved = menu1.setAccountMaintenanceFee(account, 5, 1);
+        assertTrue(maintenanceFeeSaved);
         MainMenu menu2 = new MainMenu(file);
         BankAccount loaded = menu2.getAccounts().get(0);
         assertTrue(loaded.hasMaintenanceFee());
+        assertEquals(5, loaded.getMaintenanceFeeAmount(), 0.01);
+        assertEquals(2, loaded.getMaintenanceFeeNextChargeDay());
     }
 }
 

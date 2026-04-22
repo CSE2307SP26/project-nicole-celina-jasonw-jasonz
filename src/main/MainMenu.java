@@ -187,6 +187,18 @@ public class MainMenu {
         return systemTime.getCurrentDay();
     }
 
+    public boolean setAccountMaintenanceFee(BankAccount account, double feeAmount, int startInDays) {
+        if (account == null) {
+            return false;
+        }
+        boolean maintenanceFeeWasSet = account.setMaintenanceFee(feeAmount, startInDays, systemTime.getCurrentDay());
+        if (!maintenanceFeeWasSet) {
+            return false;
+        }
+        accountStorage.writeAccounts(accounts);
+        return true;
+    }
+
     public void advanceDaysAndProcess(int days) {
         systemTime.advanceDays(days);
         processMaintenanceFeesForAllAccounts();

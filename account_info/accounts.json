@@ -25,7 +25,10 @@
     "activeLoanPrincipal": 0.0,
     "activeLoanRepaymentAmount": 0.0,
     "activeLoanDueDay": 0,
-    "loanLatePenaltyApplied": false
+    "loanLatePenaltyApplied": false,
+    "hasMaintenanceFee": false,
+    "maintenanceFeeAmount": 0.0,
+    "maintenanceFeeNextChargeDay": 0
   },
   {
     "accountName": "c",
@@ -46,7 +49,10 @@
     "activeLoanPrincipal": 0.0,
     "activeLoanRepaymentAmount": 0.0,
     "activeLoanDueDay": 0,
-    "loanLatePenaltyApplied": false
+    "loanLatePenaltyApplied": false,
+    "hasMaintenanceFee": false,
+    "maintenanceFeeAmount": 0.0,
+    "maintenanceFeeNextChargeDay": 0
   },
   {
     "accountName": "jason",
@@ -69,6 +75,9 @@
     "activeLoanPrincipal": 0.0,
     "activeLoanRepaymentAmount": 0.0,
     "activeLoanDueDay": 0,
-    "loanLatePenaltyApplied": false
+    "loanLatePenaltyApplied": false,
+    "hasMaintenanceFee": true,
+    "maintenanceFeeAmount": 3.0,
+    "maintenanceFeeNextChargeDay": 2
   }
 ]

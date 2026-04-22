@@ -3,7 +3,7 @@
     "accountName": "alice",
     "accountPassword": "1234",
     "isLoggedIn": false,
-    "balance": 0.0,
+    "balance": 3.0,
     "frozen": false,
     "transactionHistory": [],
     "hasDebitCard": false,
@@ -14,6 +14,9 @@
     "activeLoanPrincipal": 0.0,
     "activeLoanRepaymentAmount": 0.0,
     "activeLoanDueDay": 0,
-    "loanLatePenaltyApplied": false
+    "loanLatePenaltyApplied": false,
+    "hasMaintenanceFee": true,
+    "maintenanceFeeAmount": 5.0,
+    "maintenanceFeeNextChargeDay": 32
   }
 ]
