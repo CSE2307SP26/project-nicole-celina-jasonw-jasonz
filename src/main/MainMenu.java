@@ -189,8 +189,16 @@ public class MainMenu {
 
     public void advanceDaysAndProcess(int days) {
         systemTime.advanceDays(days);
+        processMaintenanceFeesForAllAccounts();
         scheduledTransferService.processDue(systemTime.getCurrentDay(), accounts, accountStorage);
         timeStorage.write(systemTime);
+        accountStorage.writeAccounts(accounts);
+    }
+
+    private void processMaintenanceFeesForAllAccounts() {
+        for (BankAccount account : accounts) {
+            account.processMaintenanceFee(systemTime.getCurrentDay());
+        }
     }
 
     public void run() {

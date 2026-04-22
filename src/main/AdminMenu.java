@@ -1,5 +1,6 @@
 package main;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
@@ -160,7 +161,8 @@ class AdminMenu {
         System.out.println("3. View account login info");
         System.out.println("4. Delete an account");
         System.out.println("5. Fast-forward time (days)");
-        System.out.println("6. Log out");
+        System.out.println("6. Manage maintenance fee");
+        System.out.println("7. Log out");
     }
 
     private void handleAdminTopChoice(int top) {
@@ -174,6 +176,8 @@ class AdminMenu {
             runAdminDeleteAccountFlow();
         } else if (top == 5) {
             fastForwardTimeFlow();
+        } else if (top == 6) {
+            runManageMaintenanceFeeFlow();
         }
     }
 
@@ -182,6 +186,7 @@ class AdminMenu {
         try {
             systemTime.advanceDays(days);
             processDueLoansForAllAccounts();
+            processMaintenanceFeesForAllAccounts();
             scheduledTransferService.processDue(systemTime.getCurrentDay(), accounts, accountStorage);
             timeStorage.write(systemTime);
             System.out.println("Time advanced. Current day is now Day " + systemTime.getCurrentDay());
@@ -200,6 +205,12 @@ class AdminMenu {
         if (anyProcessed) {
             persistAccounts();
             System.out.println("Loan repayment processing completed for due accounts.");
+        }
+    }
+
+    private void processMaintenanceFeesForAllAccounts() {
+        for (BankAccount account : accounts) {
+            account.processMaintenanceFee(systemTime.getCurrentDay());
         }
     }
 
@@ -496,6 +507,80 @@ class AdminMenu {
             System.out.println("  " + (i + 1) + ". " + a.getAccountName()
                     + " — balance: " + a.getBalance() + frozenTag);
         }
+    }
+
+    private void runManageMaintenanceFeeFlow() {
+        List<BankAccount> eligibleAccounts = getEligibleMaintenanceFeeAccounts();
+        if (eligibleAccounts.isEmpty()) {
+            printNoEligibleMaintenanceFeeAccountsMessage();
+            return;
+        }
+        BankAccount selectedAccount = promptMaintenanceFeeAccountOrBack(eligibleAccounts);
+        if (selectedAccount == null) {
+            return;
+        }
+        scheduleMaintenanceFeeForAccount(selectedAccount);
+    }
+
+    private List<BankAccount> getEligibleMaintenanceFeeAccounts() {
+        List<BankAccount> eligibleMaintenanceFeeAccounts = new ArrayList<>();
+        for (BankAccount account : accounts) {
+            if (account.getBalance() < 500) {
+                eligibleMaintenanceFeeAccounts.add(account);
+            }
+        }
+        return eligibleMaintenanceFeeAccounts;
+    }
+
+    private BankAccount promptMaintenanceFeeAccountOrBack(List<BankAccount> eligibleAccounts) {
+        System.out.println("Eligible accounts for maintenance fee:");
+
+        for (int accountIndex = 0; accountIndex < eligibleAccounts.size(); accountIndex++) {
+            BankAccount account = eligibleAccounts.get(accountIndex);
+            System.out.println("  " + (accountIndex + 1) + ". " + account.getAccountName() + " — balance: " + account.getBalance());
+        }
+
+        int backOptionIndex = eligibleAccounts.size() + 1;
+        System.out.println("  " + backOptionIndex + ". Back");
+    
+        int selectedAccountNumber = prompts.getUserSelection(backOptionIndex);
+        if (selectedAccountNumber == backOptionIndex) {
+            return null;
+        }
+        return eligibleAccounts.get(selectedAccountNumber - 1);
+    }
+
+    private void printNoEligibleMaintenanceFeeAccountsMessage() {
+        System.out.println("No eligible accounts found for maintenance fee.");
+    }
+
+    private void scheduleMaintenanceFeeForAccount(BankAccount account) {
+        double maintenanceFeeAmount = prompts.promptNonNegativeAmount(
+                "Enter maintenance fee amount (must be less than or equal to 10): ");
+        int startInDays = prompts.promptPositiveInt(
+                "Schedule first charge of maintenance fee how many days from today: ");
+        applyMaintenanceFeeAndPrintResult(account, maintenanceFeeAmount, startInDays);
+    }
+
+    private void applyMaintenanceFeeAndPrintResult(BankAccount account, double maintenanceFeeAmount, int startInDays) {
+        boolean maintenanceFeeWasSet = account.setMaintenanceFee(maintenanceFeeAmount, startInDays, systemTime.getCurrentDay());
+    if (!maintenanceFeeWasSet) {
+        printMaintenanceFeeFailureMessage();
+        return;
+    }
+    persistAccounts();
+    printMaintenanceFeeSuccessMessage(account);
+}
+
+    private void printMaintenanceFeeFailureMessage() {
+    System.out.println("Maintenance fee could not be applied. Account must have balance under 500 and fee must be between 0 and 10.");
+    }
+
+    private void printMaintenanceFeeSuccessMessage(BankAccount account) {
+        System.out.println("Maintenance fee scheduled for account: " + account.getAccountName());
+        System.out.println("Fee amount: " + account.getMaintenanceFeeAmount());
+        System.out.println("First charge day: Day " + account.getMaintenanceFeeNextChargeDay());
+        System.out.println("Future charges will repeat every 30 days.");
     }
 
     private void persistAccounts() {

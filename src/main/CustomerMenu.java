@@ -86,6 +86,7 @@ class CustomerMenu {
         String newAccountUsername = keyboardInput.next();
         System.out.println("Create a password: ");
         String newAccountPassword = keyboardInput.next();
+        System.out.println("Note: Accounts need to have a minimum balance of $500 to avoid possible maintenance fees, which would be at most $10 per 30 days if applied.");
         BankAccount newAccount = new BankAccount(newAccountUsername, newAccountPassword);
         newAccount.setLoggedIn(true);
         boolean created = recordNewAccount(newAccount);
@@ -333,6 +334,7 @@ class CustomerMenu {
         try {
             systemTime.advanceDays(days);
             processDueLoansForAllAccounts();
+            processMaintenanceFeesForAllAccounts();
             scheduledTransferService.processDue(systemTime.getCurrentDay(), accounts, accountStorage);
             timeStorage.write(systemTime);
             System.out.println("Time advanced. Current day is now Day " + systemTime.getCurrentDay());
@@ -351,6 +353,12 @@ class CustomerMenu {
         if (anyProcessed) {
             accountStorage.writeAccounts(accounts);
             System.out.println("Loan repayment processing completed for due accounts.");
+        }
+    }
+
+    private void processMaintenanceFeesForAllAccounts() {
+        for (BankAccount account : accounts) {
+            account.processMaintenanceFee(systemTime.getCurrentDay());
         }
     }
 
