@@ -187,10 +187,30 @@ public class MainMenu {
         return systemTime.getCurrentDay();
     }
 
+    public boolean setAccountMaintenanceFee(BankAccount account, double feeAmount, int startInDays) {
+        if (account == null) {
+            return false;
+        }
+        boolean maintenanceFeeWasSet = account.setMaintenanceFee(feeAmount, startInDays, systemTime.getCurrentDay());
+        if (!maintenanceFeeWasSet) {
+            return false;
+        }
+        accountStorage.writeAccounts(accounts);
+        return true;
+    }
+
     public void advanceDaysAndProcess(int days) {
         systemTime.advanceDays(days);
+        processMaintenanceFeesForAllAccounts();
         scheduledTransferService.processDue(systemTime.getCurrentDay(), accounts, accountStorage);
         timeStorage.write(systemTime);
+        accountStorage.writeAccounts(accounts);
+    }
+
+    private void processMaintenanceFeesForAllAccounts() {
+        for (BankAccount account : accounts) {
+            account.processMaintenanceFee(systemTime.getCurrentDay());
+        }
     }
 
     public void run() {

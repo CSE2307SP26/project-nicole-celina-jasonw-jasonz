@@ -1,6 +1,5 @@
 package main;
 
-
 import java.util.List;
 import java.util.ArrayList;
 
@@ -23,6 +22,9 @@ public class BankAccount {
     private int activeLoanDueDay;
     private static final double LOAN_LATE_PENALTY_RATE = 0.10;
     private boolean loanLatePenaltyApplied;
+    private boolean hasMaintenanceFee;
+    private double maintenanceFeeAmount;
+    private int maintenanceFeeNextChargeDay;
 
     public BankAccount() {
         this("defaultaccount", "defaultpassword");
@@ -44,6 +46,9 @@ public class BankAccount {
         this.activeLoanRepaymentAmount = 0;
         this.activeLoanDueDay = 0;
         this.loanLatePenaltyApplied = false;
+        this.hasMaintenanceFee = false;
+        this.maintenanceFeeAmount = 0;
+        this.maintenanceFeeNextChargeDay = 0;
     }
 
     public String getAccountName() {
@@ -103,6 +108,18 @@ public class BankAccount {
 
     public double getBalance() {
         return this.balance;
+    }
+
+    public boolean hasMaintenanceFee() {
+        return hasMaintenanceFee;
+    }
+
+    public double getMaintenanceFeeAmount() {
+        return maintenanceFeeAmount;
+    }
+
+    public int getMaintenanceFeeNextChargeDay() {
+        return maintenanceFeeNextChargeDay;
     }
 
     public void recordTransaction(String transactionType, double amount) {
@@ -258,6 +275,37 @@ public class BankAccount {
             throw new IllegalStateException("Insufficient balance");
         }
         this.balance -= amount;
+    }
+
+    public boolean setMaintenanceFee(double feeAmount, int startInDays, int currentDay) {
+        if (feeAmount <= 0 || feeAmount > 10) {
+            return false;
+        }
+        if (startInDays <= 0) {
+            return false;
+        }
+        if (this.balance >= 500) { 
+            return false;
+        }
+
+        this.hasMaintenanceFee = true;
+        this.maintenanceFeeAmount = feeAmount;
+        this.maintenanceFeeNextChargeDay = currentDay + startInDays;
+        return true;
+    }
+
+    public void processMaintenanceFee(int currentDay) {
+        if (!hasMaintenanceFee) {
+            return;
+        }
+
+        while (currentDay >= maintenanceFeeNextChargeDay) {
+            if (this.balance >= maintenanceFeeAmount) {
+                this.balance -= maintenanceFeeAmount;
+                recordTransaction("Maintenance Fee", -maintenanceFeeAmount);
+            }
+            maintenanceFeeNextChargeDay += 30;
+        }
     }
 
     /**
