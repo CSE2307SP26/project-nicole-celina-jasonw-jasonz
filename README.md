@@ -13,7 +13,9 @@
 20. A bank customer should be able to update their account credentials (username and/or password) after logging in. (Nicole Wei)
 21. A bank customer should be able to schedule future transactions (transfers to a different account on a specific date). (Nicole Wei)
 22. A bank customer should be able to make partial loan repayments before due date. (Jason Wang)
-23. If a loan is not repaid by its due date, add a one-time penalty and freeze the account. While frozen, the customer can only repay the overdue balance; all other operations are blocked until admin unfreezes. (Jason Wang)
+23. A system should be able to apply a one-time penalty and freeze an account when a loan is not repaid by its due date, restrict the account so the customer can only repay the overdue balance while frozen, and block all other operations until an administrator unfreezes the account. (Jason Wang)
+24. A bank administrator should be able to set a maintenance fee, to be charged per 30 days, on a bank account for the time duration of when that account's balance is lower than a certain amount. (Celina Xie)
+25. A bank customer should be able to check a bank account's default daily withdraw limit and current day's usage of that limit. (Celina Xie)
 
 ## What user stories were completed this iteration?
 ## Iteration 3 implementation notes (codebase changes)
