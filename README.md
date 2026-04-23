@@ -1,4 +1,4 @@
-# project26 Bank System Information Architecture
+# project26 Bank System
 
 ## Team Members:
 
@@ -6,6 +6,158 @@
 * Celina Xie
 * Jason Wang
 * Jason Zhao
+
+## User stories Iteration 3: What user stories were completed this iteration?
+18. Anyone should be able to fast-forward time to see how time-based elements (loans, fees, and investments) evolve over days. (Jason Zhao)
+19. A bank customer should be able to apply for a fixed-interest loan that deducts the repayment amount from their account after a set number of days, and if the account lacks sufficient funds at that time, the account will be frozen. (Jason Zhao)
+20. A bank customer should be able to update their account credentials (username and/or password) after logging in. (Nicole Wei)
+21. A bank customer should be able to schedule future transactions (transfers to a different account on a specific date). (Nicole Wei)
+22. A bank customer should be able to make partial loan repayments before due date. (Jason Wang)
+23. A system should be able to apply a one-time penalty and freeze an account when a loan is not repaid by its due date, restrict the account so the customer can only repay the overdue balance while frozen, and block all other operations until an administrator unfreezes the account. (Jason Wang)
+24. A bank administrator should be able to set a maintenance fee, to be charged per 30 days, on a bank account for the time duration of when that account's balance is lower than a certain amount. (Celina Xie)
+25. A bank customer should be able to check a bank account's default daily withdraw limit and current day's usage of that limit. (Celina Xie)
+
+## Iteration 3 implementation notes (codebase changes)
+- **OOP refactor / file organization**: split the previously large menu logic into `CustomerMenu` and `AdminMenu`, with `MainMenu` acting as a thin orchestrator.
+- **Data storage folder**: customer/admin data is stored under `data/accounts/` (auto-migrates legacy root JSON files on startup).
+- **Time system (Day 1 + fast-forward)**: the app tracks a global `SystemTime` starting at Day 1 (persisted to `data/accounts/system_time.json`). The current day is displayed at login, and both customer/admin can fast-forward by entering a number of days.
+- **Tests reorganized**: unit tests were split into multiple files for clarity (`BankAccountCoreTest`, `CustomerFlowTest`, `AdminFlowTest`).
+
+## Is there anything that you implemented but doesn't currently work?
+Everything is working except that JUnit test cases can only be ran from cursor/terminal/script but not the "Testing" tool on the left bar of VSCode.
+
+## What commands are needed to compile and run your code from the command line?
+bash runApp.sh
+
+---
+## [past iterations & other info]
+
+## Top-Level Sitemap
+
+- Role Selection
+  - Customer Login
+  - Customer Signup
+  - Administrator Login
+
+- Customer Login
+  - Enter username & password of an existing account - Logged into Customer Account Detail Page
+
+- Customer Signup (Previous create account function)
+  - Create username (unique) & password for a new account - Logged into Customer Account Detail Page
+
+- Administrator Signup & Login
+  - 1st time: create password & answers for 2 security questions
+  - 2nd time & later: enter password & answer for 1 randomly selected security question - Logged into Administrator Page
+
+
+- Customer Account Detail Page
+  - Deposit
+  - Withdraw
+  - Check Balance
+  - Transfer money (large transfers may require administrator approval)
+    - Complete transfer now
+    - Schedule transfer for a later day (funds must be sufficient on the scheduled day)
+  - View transaction history
+  - View debit card
+  - Update account credentials (username and/or password)
+  - Close account
+  - Apply for a loan
+
+- Administrator Page
+  - Dashboard
+    - Select customer account to manage - Account Detail Page
+    - Review pending large transfers (approve, deny, or cancel)
+    - View customer account login info
+    - Delete a customer account
+  - Account Detail
+    - Collect Fees
+    - Add Interest Payment
+    - Freeze Account
+    - Unfreeze account
+
+## Sitemap as Tree
+
+```text
+Bank System
+├── Role Selection
+│   ├── Customer
+│   │   ├── Customer Login
+│   │   └── Customer Signup
+│   │
+│   └── Administrator
+│       └── Signup (1st time) / Login
+│
+├── Customer Dashboard
+│   ├── Signup: Create new username & password ——— Logged In ——— Account Detail
+│   └── Login: Enter existing username & password
+│       └── Account Detail
+│           ├── Check Balance
+│           ├── Deposit
+│           │   └── If account is frozen: blocked
+│           ├── Withdraw
+│           │   └── If account is frozen: blocked
+│           ├── Transfer money
+│           │   ├── Complete transfer now (large transfers require admin approval)
+│           │   └── Schedule transfer for a later day
+│           │       ├── Select target account
+│           │       ├── Enter amount
+│           │       └── Enter number of days from today
+│           │   └── If account is frozen: blocked
+│           ├── View transaction history
+│           ├── View debit card
+│           │   ├── Link a debit card for 1st time (randomly generated card number)
+│           │   │   ├── Enter first name for card
+│           │   │   └── Enter last name for card
+│           │   │
+│           │   └── If already linked: show Cardholder Name, Card Number, and Linked bank account
+│           │
+│           ├── Update account credentials
+│           │   ├── Update username
+│           │   ├── Update password
+│           │   ├── Update both
+│           │   └── Cancel
+│           │
+│           ├── Apply for a loan
+│           │   ├── Enter loan amount
+│           │   ├── Enter repayment due in number of days
+│           │   └── Loan is disbursed immediately with fixed interest
+│           │
+│           ├── Make loan repayment
+│           │   ├── View remaining loan repayment amount
+│           │   ├── Enter repayment amount
+│           │   ├── Partial repayment allowed
+│           │   ├── Full early repayment allowed
+│           │   └── If account is frozen due to overdue loan: repayment still allowed
+│           │
+│           ├── Loan overdue / default behavior
+│           │   ├── If repayment amount due cannot be covered on due day
+│           │   │   ├── Apply one-time overdue penalty
+│           │   │   ├── Freeze account
+│           │   │   └── Keep overdue loan active until repaid
+│           │   └── Overdue loan repayment remains allowed while other frozen actions stay blocked
+│           │
+│           └── Close account
+│
+└── Administrator
+    ├── Signup (1st time)
+    │   ├── Create password
+    │   └── Create answers for 2 security questions
+    │
+    └── Login: Enter password & answer for 1 randomly selected security question
+        └── Administrator Dashboard
+            ├── Select customer account to manage
+            │   └── Enter Customer Account Username
+            │       └── Manage Account Detail
+            │           ├── Collect Fees
+            │           ├── Add Interest Payment
+            │           ├── Freeze Account
+            │           └── Unfreeze Account
+            │               └── Required to fully restore normal account actions after overdue-loan freeze
+            │
+            ├── Review Pending Large Transfers: accept / deny / cancel
+            ├── View customer account login info
+            └── Delete A Customer Account
+```
 
 ## User stories Iteration 1
 
@@ -30,103 +182,12 @@
 17. A bank admin should be able to set up their login credentials (password and security questions) and log into their account using the correct password and answers. (Celina Xie)
 
 
-## What user stories were completed this iteration?
-We completed all 8 user stories introduced in iteration 2, following the information architecture below. 
-
-## What user stories do you intend to complete next iteration?
-We will likely elaborate some details of the program based on real-life bank account functions and extend the program to non-bank functions (i.e. stock market) that would require customer and admin account information.
-
-## Is there anything that you implemented but doesn't currently work?
-Everything is currently working. 
-## What commands are needed to compile and run your code from the command line?
-bash runApp.sh
-
-
-## Top-Level Sitemap
-
-- Role Selection
-  - Customer Login
-  - Customer Signup
-  - Administrator Login
-
-- Customer Login
-  - Enter username & password of an existing account - Logged into Customer Account Detail Page
-
-- Customer Signup (Previous create account function)
-  - Create username (unique) & password for a new account - Logged into Customer Account Detail Page
-
-- Administrator Signup & Login
-  - 1st time: create password & answers for 2 security questions
-  - 2nd time & later: enter password & answer for 1 randomly selected secruity question - Logged into Administrator Page
-
-
-- Customer Account Detail Page
-  - Deposit
-  - Withdraw
-  - Check Balance
-  - Transfer money (large transfers may require administrator approval)
-  - View transaction history
-  - View debit card
-  - Close account
-
-- Administrator Page
-  - Dashboard
-    - Select customer account to manage - Account Detail Page
-    - Review pending large transfers (approve, deny, or cancel)
-    - View customer account login info
-    - Delete a customer account
-  - Account Detail
-    - Collect Fees
-    - Add Interest Payment
-    - Freeze Account
-    - Unfreeze account
-
-## Sitemap as Tree
-
-```text
-Bank System
-├── Role Selection
-│   ├── Customer
-│   │   ├── Customer Login
-│   │   └── Customer Signup
-|   │
-│   └── Administrator
-|       └── Signup (1st time) / Login
-│
-│
-├── Customer Dashboard
-│   ├── Signup: Create new username & password ——— Logged In ——— Account Detail
-|   └── Login: Enter existing username & password
-│       └── Account Detail
-│           ├── Check Balance
-│           ├── Deposit
-│           ├── Withdraw
-│           ├── Transfer money
-│           ├── View transaction history
-│           ├── View debit card
-│           │   ├── Link a debit card for 1st time (randomly generated card number)
-│           │   │   ├── Enter first name for card
-│           │   │   └── Enter last name for card
-│           │   │
-│           │   └── If already linked: show Cardholder Name, Card Number, and Linked bank account
-│           │
-│           └── Close account
-│
-└── Administrator
-    ├── Signup (1st time)
-    │   ├── Create password
-    │   └── Create answers for 2 security questions
-    │
-    └── Login: Enter password & answer for 1 randomly selected security question
-        └── Administrator Dashboard
-            ├── Select customer account to manage
-            │   └── Enter Customer Account Username
-            │       └── Manage Account Detail
-            │           ├── Collect Fees
-            │           ├── Add Interest Payment
-            │           ├── Freeze Account
-            │           └── Unfreeze Account
-            ├── Review Pending Large Transfers: accept / deny / cancel
-            ├── View customer account login info
-            └── Delete A Customer Account
-```
+## User stories Iteration 2
+10. A bank administrator should be able to approve or deny a large transfer request (over $10,000) from a customer. (Jason Zhao)
+11. A bank admin should be able to freeze existing accounts. (Jason Zhao)
+12. A bank customer should be able to create a new account by signing up with valid credentials (unique username + password). (Nicole Wei)
+13. A bank customer should be able to log into an existing account using the correct username and password. (Jason Wang)
+14. A bank customer should be able to set up a debit card and view its information for each bank account they own. (Celina Xie)
+15. A bank admin should be able to view a list of all account information, with data persisting across sessions. (Nicole Wei)
+16. A bank admin should be able to permanently delete an account from the bank’s database. (Jason Wang)
+17. A bank admin should be able to set up their login credentials (password and security questions) and log into their account using the correct password and answers. (Celina Xie)

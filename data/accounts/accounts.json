@@ -1,0 +1,16 @@
+[
+  {
+    "accountName": "jason",
+    "accountPassword": "zhao",
+    "isLoggedIn": true,
+    "balance": 100416.66666666667,
+    "frozen": false,
+    "transactionHistory": [
+      "Deposit: 100000.0"
+    ],
+    "hasDebitCard": false,
+    "debitCardFirstName": "",
+    "debitCardLastName": "",
+    "debitCardNumber": ""
+  }
+]

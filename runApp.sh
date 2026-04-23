@@ -1,25 +1,28 @@
 #!/bin/bash
 
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit 1
 
-# Compile
 echo "=== Cleaning ==="
-rm -rf out
-mkdir -p out
+rm -rf bin
+mkdir -p bin
 
 echo "=== Compiling ==="
-javac -d out -cp "lib/*:test-lib/*" src/main/*.java src/test/*.java
+javac -d bin -cp "lib/*:test-lib/*" src/main/main/*.java src/test/test/*.java
 
 if [ $? -ne 0 ]; then
   echo "Compilation failed."
   exit 1
 fi
 
-# Run unit tests
 echo "=== Running Unit Tests ==="
-java -cp "out:lib/*:test-lib/*" \
-  org.junit.platform.console.ConsoleLauncher --scan-classpath
+java -jar lib/junit-platform-console-standalone-1.13.0-M3.jar \
+  --class-path "bin:lib/gson-2.13.2.jar" \
+  --scan-class-path
 
-# Run the app
+if [ $? -ne 0 ]; then
+  echo "Tests failed."
+  exit 1
+fi
+
 echo "=== Running App ==="
-java -cp "out:lib/*" main.MainMenu
+java -cp "bin:lib/*" main.MainMenu

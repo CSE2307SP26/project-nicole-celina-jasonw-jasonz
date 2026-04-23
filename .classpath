@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" output="bin/main" path="src/main"/>
+	<classpathentry kind="src" output="bin/test" path="src/test">
+		<attributes>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/gson-2.13.2.jar"/>
-	<classpathentry kind="lib" path="lib/junit-platform-console-standalone-1.13.0-M3.jar"/>
+	<classpathentry kind="lib" path="lib/junit-platform-console-standalone-1.13.0-M3.jar">
+		<attributes>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
