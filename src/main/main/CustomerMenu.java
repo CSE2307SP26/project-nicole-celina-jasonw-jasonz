@@ -34,12 +34,20 @@ class CustomerMenu {
     }
 
     void displayAccountDetailMenu(BankAccount account) {
+        printAccountDetailHeader(account);
+        printAccountDetailOptions();
+    }
+
+    private void printAccountDetailHeader(BankAccount account) {
         System.out.println();
         System.out.println("Day " + systemTime.getCurrentDay());
         System.out.println("--- Account detail: " + account.getAccountName() + " ---");
         if (account.isFrozen()) {
             System.out.println("(This account is frozen: deposits, withdrawals, and transfers are disabled.)");
         }
+    }
+
+    private void printAccountDetailOptions() {
         System.out.println("1. Deposit");
         System.out.println("2. Withdraw");
         System.out.println("3. Check balance");
@@ -241,7 +249,7 @@ class CustomerMenu {
     }
 
     private void performLoanRepayment(BankAccount account) {
-        if (!account.hasActiveLoan()){
+        if (!account.hasActiveLoan()) {
             System.out.println("You do not have an active loan to repay.");
             return;
         }
@@ -252,16 +260,25 @@ class CustomerMenu {
             System.out.println("No repayment made.");
             return;
         }
+        tryExecuteLoanRepayment(account, amount);
+    }
+
+    private void tryExecuteLoanRepayment(BankAccount account, double amount) {
         try {
             account.makeLoanRepayment(amount, systemTime.getCurrentDay());
             accountStorage.writeAccounts(accounts);
-            if (account.hasActiveLoan()){
-                System.out.println("Repayment successful. Remaining loan repayment amount: " + account.getActiveLoanRepaymentAmount());
-            } else {
-                System.out.println("Loan fully paid.");
-            }
+            printLoanRepaymentResult(account);
         } catch (IllegalStateException | IllegalArgumentException e) {
             System.out.println(e.getMessage());
+        }
+    }
+
+    private void printLoanRepaymentResult(BankAccount account) {
+        if (account.hasActiveLoan()) {
+            System.out.println("Repayment successful. Remaining loan repayment amount: "
+                    + account.getActiveLoanRepaymentAmount());
+        } else {
+            System.out.println("Loan fully paid.");
         }
     }
 
@@ -617,23 +634,32 @@ class CustomerMenu {
     private void completeImmediateTransfer(BankAccount account, BankAccount target, double amount) {
         try {
             if (!account.canWithdrawWithinDailyLimit(amount, systemTime.getCurrentDay())) {
-                System.out.println("Daily withdrawal/transfer out limit exceeded. You can only withdraw/transfer out up to $" + account.getDailyWithdrawLimit() + " today.");
+                System.out.println("Daily withdrawal/transfer out limit exceeded. You can only withdraw/transfer out up to $"
+                        + account.getDailyWithdrawLimit() + " today.");
                 return;
             }
-            account.withdraw(amount);
-            account.recordDailyWithdrawAmount(amount, systemTime.getCurrentDay());
-            account.recordTransaction("Transfer Out", -amount);
-            target.deposit(amount);
-            target.recordTransaction("Transfer In", amount);
-            accountStorage.writeAccounts(accounts);
-            System.out.println("--- Here's your updated account balance: ---");
-            System.out.println(account.getAccountName() + ": " + account.getBalance());
-            System.out.println(target.getAccountName() + ": " + target.getBalance());
+            applyImmediateTransfer(account, target, amount);
+            printImmediateTransferSummary(account, target);
         } catch (IllegalArgumentException e) {
             System.out.println("Invalid amount.");
         } catch (IllegalStateException e) {
             System.out.println(e.getMessage());
         }
+    }
+
+    private void applyImmediateTransfer(BankAccount account, BankAccount target, double amount) {
+        account.withdraw(amount);
+        account.recordDailyWithdrawAmount(amount, systemTime.getCurrentDay());
+        account.recordTransaction("Transfer Out", -amount);
+        target.deposit(amount);
+        target.recordTransaction("Transfer In", amount);
+        accountStorage.writeAccounts(accounts);
+    }
+
+    private void printImmediateTransferSummary(BankAccount account, BankAccount target) {
+        System.out.println("--- Here's your updated account balance: ---");
+        System.out.println(account.getAccountName() + ": " + account.getBalance());
+        System.out.println(target.getAccountName() + ": " + target.getBalance());
     }
 
     private void performCheckDailyWithdrawAmount(BankAccount account) {

@@ -40,18 +40,34 @@ public class BankAccount {
         this.balance = 0;
         this.frozen = false;
         this.transactionHistory = new ArrayList<>();
+        initializeDebitCardFields();
+        initializeLoanFields();
+        initializeMaintenanceFeeFields();
+        initializeDailyWithdrawFields();
+    }
+
+    private void initializeDebitCardFields() {
         this.hasDebitCard = false;
         this.debitCardFirstName = "";
         this.debitCardLastName = "";
         this.debitCardNumber = "";
+    }
+
+    private void initializeLoanFields() {
         this.hasActiveLoan = false;
         this.activeLoanPrincipal = 0;
         this.activeLoanRepaymentAmount = 0;
         this.activeLoanDueDay = 0;
         this.loanLatePenaltyApplied = false;
+    }
+
+    private void initializeMaintenanceFeeFields() {
         this.hasMaintenanceFee = false;
         this.maintenanceFeeAmount = 0;
         this.maintenanceFeeNextChargeDay = 0;
+    }
+
+    private void initializeDailyWithdrawFields() {
         this.dailyWithdrawAmount = 0;
         this.dailyWithdrawDay = 0;
     }
@@ -220,6 +236,18 @@ public class BankAccount {
     }
 
     public void makeLoanRepayment(double amount, int currentDay) {
+        validateLoanRepaymentInputs(amount);
+        double payment = Math.min(amount, activeLoanRepaymentAmount);
+        balance -= payment;
+        activeLoanRepaymentAmount -= payment;
+        recordTransaction("Loan Repayment", -payment);
+        if (activeLoanRepaymentAmount <= 0.000001) {
+            clearActiveLoan();
+            recordTransaction("Loan Fully Repaid", 0);
+        }
+    }
+
+    private void validateLoanRepaymentInputs(double amount) {
         if (!hasActiveLoan) {
             throw new IllegalStateException("You do not have an active loan.");
         }
@@ -228,17 +256,6 @@ public class BankAccount {
         }
         if (amount > balance) {
             throw new IllegalArgumentException("Insufficient balance");
-        }
-
-        double payment = Math.min(amount, activeLoanRepaymentAmount);
-
-        balance -= payment;
-        activeLoanRepaymentAmount -= payment;
-        recordTransaction("Loan Repayment", -payment);
-
-        if (activeLoanRepaymentAmount <= 0.000001) {
-            clearActiveLoan();
-            recordTransaction("Loan Fully Repaid", 0);
         }
     }
 
