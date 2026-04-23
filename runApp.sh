@@ -7,7 +7,7 @@ rm -rf bin
 mkdir -p bin
 
 echo "=== Compiling ==="
-javac -d bin -cp "lib/*:test-lib/*" src/main/*.java src/test/*.java
+javac -d bin -cp "lib/*:test-lib/*" src/main/main/*.java src/test/test/*.java
 
 if [ $? -ne 0 ]; then
   echo "Compilation failed."

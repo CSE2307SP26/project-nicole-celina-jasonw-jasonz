@@ -1,35 +1,8 @@
-// {
-//   "java.project.sourcePaths": ["src"],
-//   // "java.project.sourcePaths": ["src/main"],
-//   // "java.project.testSourcePaths": ["src/test"],
-//   "java.project.outputPath": "bin",
-//   "java.project.referencedLibraries": [
-//     "lib/*.jar",
-//     "lib/**/*.jar",
-//     "test-lib/*.jar",
-//     "test-lib/**/*.jar"
-//   ],
-//   "java.test.config": {
-//     "workingDirectory": "${workspaceFolder}"
-//   }
-// }
-
-// {
-//   "java.project.sourcePaths": ["src"],
-//   "java.project.outputPath": "bin",
-//   "java.project.referencedLibraries": [
-//     "lib/junit-platform-console-standalone-1.13.2.jar",
-//     "lib/gson-2.13.2.jar"
-//   ]
-// }
-
 {
-  "java.project.sourcePaths": ["src"],
-  "java.project.outputPath": "bin",
-  "java.project.referencedLibraries": [
-    "lib/*.jar",
-    "lib/**/*.jar",
-    "test-lib/*.jar",
-    "test-lib/**/*.jar"
-  ]
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.test.defaultConfig": "project-config",
+  "java.test.config": {
+    "name": "project-config",
+    "workingDirectory": "${workspaceFolder}"
+  }
 }
