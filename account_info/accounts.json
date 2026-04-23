@@ -3,7 +3,7 @@
     "accountName": "wei",
     "accountPassword": "www",
     "isLoggedIn": true,
-    "balance": 0.0,
+    "balance": 21.0,
     "frozen": false,
     "transactionHistory": [
       "Transfer In: 1.0",
@@ -15,7 +15,9 @@
       "Withdraw: -600.0",
       "Withdraw: -94.0",
       "Deposit: 100.0",
-      "Scheduled Transfer Out: -100.0"
+      "Scheduled Transfer Out: -100.0",
+      "Transfer In: 1.0",
+      "Scheduled Transfer In: 20.0"
     ],
     "hasDebitCard": false,
     "debitCardFirstName": "",
@@ -28,7 +30,9 @@
     "loanLatePenaltyApplied": false,
     "hasMaintenanceFee": false,
     "maintenanceFeeAmount": 0.0,
-    "maintenanceFeeNextChargeDay": 0
+    "maintenanceFeeNextChargeDay": 0,
+    "dailyWithdrawAmount": 0.0,
+    "dailyWithdrawDay": 0
   },
   {
     "accountName": "c",
@@ -52,20 +56,27 @@
     "loanLatePenaltyApplied": false,
     "hasMaintenanceFee": false,
     "maintenanceFeeAmount": 0.0,
-    "maintenanceFeeNextChargeDay": 0
+    "maintenanceFeeNextChargeDay": 0,
+    "dailyWithdrawAmount": 0.0,
+    "dailyWithdrawDay": 0
   },
   {
     "accountName": "jason",
     "accountPassword": "zhao",
     "isLoggedIn": true,
-    "balance": 199.5,
+    "balance": 155.5,
     "frozen": false,
     "transactionHistory": [
       "Loan Disbursed: 100.0",
       "Loan Default - Account Frozen: 0.0",
       "Loan Disbursed: 10.0",
       "Loan Repaid: -10.5",
-      "Scheduled Transfer In: 100.0"
+      "Scheduled Transfer In: 100.0",
+      "Withdraw: -10.0",
+      "Transfer Out: -1.0",
+      "Maintenance Fee: -3.0",
+      "Scheduled Transfer Out: -20.0",
+      "Withdraw: -10.0"
     ],
     "hasDebitCard": false,
     "debitCardFirstName": "",
@@ -78,6 +89,8 @@
     "loanLatePenaltyApplied": false,
     "hasMaintenanceFee": true,
     "maintenanceFeeAmount": 3.0,
-    "maintenanceFeeNextChargeDay": 2
+    "maintenanceFeeNextChargeDay": 32,
+    "dailyWithdrawAmount": 30.0,
+    "dailyWithdrawDay": 3
   }
 ]

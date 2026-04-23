@@ -25,6 +25,9 @@ public class BankAccount {
     private boolean hasMaintenanceFee;
     private double maintenanceFeeAmount;
     private int maintenanceFeeNextChargeDay;
+    private static final double DAILY_WITHDRAW_LIMIT = 10000.0;
+    private double dailyWithdrawAmount;
+    private int dailyWithdrawDay;
 
     public BankAccount() {
         this("defaultaccount", "defaultpassword");
@@ -49,6 +52,8 @@ public class BankAccount {
         this.hasMaintenanceFee = false;
         this.maintenanceFeeAmount = 0;
         this.maintenanceFeeNextChargeDay = 0;
+        this.dailyWithdrawAmount = 0;
+        this.dailyWithdrawDay = 0;
     }
 
     public String getAccountName() {
@@ -120,6 +125,14 @@ public class BankAccount {
 
     public int getMaintenanceFeeNextChargeDay() {
         return maintenanceFeeNextChargeDay;
+    }
+
+    public double getDailyWithdrawLimit() {
+        return DAILY_WITHDRAW_LIMIT;
+    }
+
+    public double getDailyWithdrawAmount() {
+        return dailyWithdrawAmount;
     }
 
     public void recordTransaction(String transactionType, double amount) {
@@ -305,6 +318,24 @@ public class BankAccount {
                 recordTransaction("Maintenance Fee", -maintenanceFeeAmount);
             }
             maintenanceFeeNextChargeDay += 30;
+        }
+    }
+
+    public void recordDailyWithdrawAmount(double withdrawAmount, int currentDay) {
+        resetDailyWithdrawAmountIfNewDay(currentDay);
+        this.dailyWithdrawAmount += withdrawAmount;
+        this.dailyWithdrawDay = currentDay;
+    }
+
+    public boolean canWithdrawWithinDailyLimit(double withdrawAmount, int currentDay) {
+        resetDailyWithdrawAmountIfNewDay(currentDay);
+        return dailyWithdrawAmount + withdrawAmount <= DAILY_WITHDRAW_LIMIT;
+    }
+
+    private void resetDailyWithdrawAmountIfNewDay(int currentDay) {
+        if (dailyWithdrawDay != currentDay) {
+            dailyWithdrawAmount = 0;
+            dailyWithdrawDay = currentDay;
         }
     }
 

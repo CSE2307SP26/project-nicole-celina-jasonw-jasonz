@@ -17,6 +17,8 @@
     "loanLatePenaltyApplied": false,
     "hasMaintenanceFee": true,
     "maintenanceFeeAmount": 5.0,
-    "maintenanceFeeNextChargeDay": 32
+    "maintenanceFeeNextChargeDay": 32,
+    "dailyWithdrawAmount": 0.0,
+    "dailyWithdrawDay": 0
   }
 ]

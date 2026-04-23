@@ -521,5 +521,181 @@ public class CustomerFlowTest {
         BankAccount result2 = menu.authenticateCustomerLogin("bob", "5678");
         assertEquals(acc2, result2);
     }
+
+    @Nested
+    class DailyWithdrawLimitTests {
+        @TempDir
+        Path tempDir;
+
+        private MainMenu freshMenu() {
+            return new MainMenu(tempDir.resolve("accounts.json").toString());
+        }
+
+        private BankAccount addFundedAccount(MainMenu menu, String accountName, double startingBalance) {
+            BankAccount account = new BankAccount(accountName, "pw");
+            if (startingBalance > 0) {
+                account.deposit(startingBalance);
+            }
+            menu.getAccounts().add(account);
+            return account;
+        }
+
+        @Test
+        void testDailyWithdrawAmountStartsAtZero() {
+            BankAccount account = new BankAccount("alice", "1234");
+
+            double dailyWithdrawAmount = account.getDailyWithdrawAmount();
+
+            assertEquals(0, dailyWithdrawAmount, 0.001);
+        }
+
+        @Test
+        void testDailyWithdrawLimitIsTenThousand() {
+            BankAccount account = new BankAccount("alice", "1234");
+
+            double dailyWithdrawLimit = account.getDailyWithdrawLimit();
+
+            assertEquals(10000, dailyWithdrawLimit, 0.001);
+        }
+
+        @Test
+        void testDailyWithdrawAmountIncreasesAfterWithdrawTransactionIsRecorded() {
+            BankAccount account = new BankAccount("alice", "1234");
+
+            account.recordDailyWithdrawAmount(3000, 1);
+
+            assertEquals(3000, account.getDailyWithdrawAmount(), 0.001);
+        }
+
+        @Test
+        void testDailyWithdrawAmountIncreasesAfterMultipleTransactionsSameDay() {
+            BankAccount account = new BankAccount("alice", "1234");
+
+            account.recordDailyWithdrawAmount(3000, 1);
+            account.recordDailyWithdrawAmount(2500, 1);
+
+            assertEquals(5500, account.getDailyWithdrawAmount(), 0.001);
+        }
+
+        @Test
+        void testDailyWithdrawAmountResetsOnNewDay() {
+            BankAccount account = new BankAccount("alice", "1234");
+
+            account.recordDailyWithdrawAmount(3000, 1);
+            account.recordDailyWithdrawAmount(2000, 2);
+
+            assertEquals(2000, account.getDailyWithdrawAmount(), 0.001);
+        }
+
+        @Test
+        void testWithdrawWithinDailyLimitSucceeds() {
+            MainMenu menu = freshMenu();
+            BankAccount account = addFundedAccount(menu, "alice", 15000);
+
+            boolean withdrawWasAllowed = account.canWithdrawWithinDailyLimit(4000, menu.getCurrentDay());
+            if (withdrawWasAllowed) {
+                account.withdraw(4000);
+                account.recordDailyWithdrawAmount(4000, menu.getCurrentDay());
+            }
+
+            assertTrue(withdrawWasAllowed);
+            assertEquals(11000, account.getBalance(), 0.001);
+            assertEquals(4000, account.getDailyWithdrawAmount(), 0.001);
+        }
+
+        @Test
+        void testWithdrawOverDailyLimitFails() {
+            MainMenu menu = freshMenu();
+            BankAccount account = addFundedAccount(menu, "alice", 15000);
+
+            account.recordDailyWithdrawAmount(9000, menu.getCurrentDay());
+            boolean withdrawWasAllowed = account.canWithdrawWithinDailyLimit(1500, menu.getCurrentDay());
+
+            assertFalse(withdrawWasAllowed);
+            assertEquals(15000, account.getBalance(), 0.001);
+            assertEquals(9000, account.getDailyWithdrawAmount(), 0.001);
+        }
+
+        @Test
+        void testImmediateTransferCountsTowardDailyLimit() {
+            MainMenu menu = freshMenu();
+            BankAccount sourceAccount = addFundedAccount(menu, "source", 20000);
+            BankAccount targetAccount = addFundedAccount(menu, "target", 0);
+
+            sourceAccount.recordDailyWithdrawAmount(8000, menu.getCurrentDay());
+
+            boolean transferWasAllowed = sourceAccount.canWithdrawWithinDailyLimit(1500, menu.getCurrentDay());
+            if (transferWasAllowed) {
+                sourceAccount.withdraw(1500);
+                sourceAccount.recordDailyWithdrawAmount(1500, menu.getCurrentDay());
+                targetAccount.deposit(1500);
+            }
+
+            assertTrue(transferWasAllowed);
+            assertEquals(18500, sourceAccount.getBalance(), 0.001);
+            assertEquals(1500, targetAccount.getBalance(), 0.001);
+            assertEquals(9500, sourceAccount.getDailyWithdrawAmount(), 0.001);
+        }
+
+        @Test
+        void testImmediateTransferOverRemainingDailyLimitFails() {
+            MainMenu menu = freshMenu();
+            BankAccount sourceAccount = addFundedAccount(menu, "source", 20000);
+            BankAccount targetAccount = addFundedAccount(menu, "target", 0);
+
+            sourceAccount.recordDailyWithdrawAmount(9500, menu.getCurrentDay());
+            boolean transferWasAllowed = sourceAccount.canWithdrawWithinDailyLimit(1000, menu.getCurrentDay());
+
+            assertFalse(transferWasAllowed);
+            assertEquals(20000, sourceAccount.getBalance(), 0.001);
+            assertEquals(0, targetAccount.getBalance(), 0.001);
+            assertEquals(9500, sourceAccount.getDailyWithdrawAmount(), 0.001);
+        }
+
+        @Test
+        void testScheduledTransferCountsTowardDailyLimitWhenExecuted() {
+            MainMenu menu = freshMenu();
+            BankAccount sourceAccount = addFundedAccount(menu, "source", 20000);
+            BankAccount targetAccount = addFundedAccount(menu, "target", 0);
+
+            sourceAccount.recordDailyWithdrawAmount(7000, menu.getCurrentDay() + 2);
+            menu.scheduleTransfer(sourceAccount, targetAccount, 2000, 2);
+            menu.advanceDaysAndProcess(2);
+
+            assertEquals(18000, sourceAccount.getBalance(), 0.001);
+            assertEquals(2000, targetAccount.getBalance(), 0.001);
+            assertEquals(9000, sourceAccount.getDailyWithdrawAmount(), 0.001);
+        }
+
+        @Test
+        void testScheduledTransferOverDailyLimitFailsOnExecutionDay() {
+            MainMenu menu = freshMenu();
+            BankAccount sourceAccount = addFundedAccount(menu, "source", 20000);
+            BankAccount targetAccount = addFundedAccount(menu, "target", 0);
+
+            sourceAccount.recordDailyWithdrawAmount(9500, menu.getCurrentDay() + 2);
+            menu.scheduleTransfer(sourceAccount, targetAccount, 1000, 2);
+            menu.advanceDaysAndProcess(2);
+
+            assertEquals(20000, sourceAccount.getBalance(), 0.001);
+            assertEquals(0, targetAccount.getBalance(), 0.001);
+            assertEquals(9500, sourceAccount.getDailyWithdrawAmount(), 0.001);
+        }
+
+        @Test
+        void testDailyWithdrawAmountResetsBeforeScheduledTransferExecutesOnLaterDay() {
+            MainMenu menu = freshMenu();
+            BankAccount sourceAccount = addFundedAccount(menu, "source", 20000);
+            BankAccount targetAccount = addFundedAccount(menu, "target", 0);
+
+            sourceAccount.recordDailyWithdrawAmount(9500, menu.getCurrentDay());
+            menu.scheduleTransfer(sourceAccount, targetAccount, 1000, 2);
+            menu.advanceDaysAndProcess(2);
+
+            assertEquals(19000, sourceAccount.getBalance(), 0.001);
+            assertEquals(1000, targetAccount.getBalance(), 0.001);
+            assertEquals(1000, sourceAccount.getDailyWithdrawAmount(), 0.001);
+        }
+    }
 }
 
