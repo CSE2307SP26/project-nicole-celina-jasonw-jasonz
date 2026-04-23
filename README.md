@@ -7,7 +7,7 @@
 * Jason Wang
 * Jason Zhao
 
-## User stories Iteration 3
+## User stories Iteration 3: What user stories were completed this iteration?
 18. Anyone should be able to fast-forward time to see how time-based elements (loans, fees, and investments) evolve over days. (Jason Zhao)
 19. A bank customer should be able to apply for a fixed-interest loan that deducts the repayment amount from their account after a set number of days, and if the account lacks sufficient funds at that time, the account will be frozen. (Jason Zhao)
 20. A bank customer should be able to update their account credentials (username and/or password) after logging in. (Nicole Wei)
@@ -17,9 +17,7 @@
 24. A bank administrator should be able to set a maintenance fee, to be charged per 30 days, on a bank account for the time duration of when that account's balance is lower than a certain amount. (Celina Xie)
 25. A bank customer should be able to check a bank account's default daily withdraw limit and current day's usage of that limit. (Celina Xie)
 
-## What user stories were completed this iteration?
 ## Iteration 3 implementation notes (codebase changes)
-
 - **OOP refactor / file organization**: split the previously large menu logic into `CustomerMenu` and `AdminMenu`, with `MainMenu` acting as a thin orchestrator.
 - **Data storage folder**: customer/admin data is stored under `data/accounts/` (auto-migrates legacy root JSON files on startup).
 - **Time system (Day 1 + fast-forward)**: the app tracks a global `SystemTime` starting at Day 1 (persisted to `data/accounts/system_time.json`). The current day is displayed at login, and both customer/admin can fast-forward by entering a number of days.
@@ -27,6 +25,7 @@
 
 ## Is there anything that you implemented but doesn't currently work?
 Everything is working except that JUnit test cases can only be ran from cursor/terminal/script but not the "Testing" tool on the left bar of VSCode.
+
 ## What commands are needed to compile and run your code from the command line?
 bash runApp.sh
 
