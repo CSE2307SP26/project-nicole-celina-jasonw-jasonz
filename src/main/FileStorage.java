@@ -293,7 +293,7 @@ class ScheduledTransferService {
         List<ScheduledTransfer> due = collectDue(currentDay);
         int executed = 0;
         for (ScheduledTransfer t : due) {
-            if (executeScheduled(t, accounts)) {
+            if (executeScheduled(t, accounts, currentDay)) {
                 executed++;
             }
         }
@@ -315,14 +315,15 @@ class ScheduledTransferService {
         return due;
     }
 
-    private boolean executeScheduled(ScheduledTransfer t, List<BankAccount> accounts) {
+    private boolean executeScheduled(ScheduledTransfer t, List<BankAccount> accounts, int currentDay) {
         BankAccount from = findAccount(t.fromAccountName, accounts);
         BankAccount to = findAccount(t.toAccountName, accounts);
-        if (!canExecuteScheduled(t, from, to)) {
+        if (!canExecuteScheduled(t, from, to, currentDay)) {
             printFailedScheduled(t);
             return false;
         }
         from.withdraw(t.amount);
+        from.recordDailyWithdrawAmount(t.amount, currentDay);
         from.recordTransaction("Scheduled Transfer Out", -t.amount);
         to.deposit(t.amount);
         to.recordTransaction("Scheduled Transfer In", t.amount);
@@ -331,15 +332,14 @@ class ScheduledTransferService {
         return true;
     }
 
-    private boolean canExecuteScheduled(ScheduledTransfer t, BankAccount from, BankAccount to) {
+    private boolean canExecuteScheduled(ScheduledTransfer t, BankAccount from, BankAccount to, int currentDay) {
         return from != null && to != null && !from.isFrozen() && !to.isFrozen()
-                && from.getBalance() >= t.amount;
+                && from.getBalance() >= t.amount
+                && from.canWithdrawWithinDailyLimit(t.amount, currentDay);
     }
 
     private void printFailedScheduled(ScheduledTransfer t) {
-        System.out.println("Scheduled transfer from " + t.fromAccountName + " to " + t.toAccountName
-                + " for " + t.amount + " (Day " + t.scheduledDay + ") could not be executed: "
-                + "insufficient funds or account unavailable.");
+        System.out.println("Scheduled transfer from " + t.fromAccountName + " to " + t.toAccountName + " for " + t.amount + " (Day " + t.scheduledDay + ") could not be executed: " + "insufficient funds, daily withdrawal limit exceeded, or account unavailable.");
     }
 
     private BankAccount findAccount(String name, List<BankAccount> accounts) {

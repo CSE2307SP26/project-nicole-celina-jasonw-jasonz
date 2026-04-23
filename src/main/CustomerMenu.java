@@ -51,7 +51,8 @@ class CustomerMenu {
         System.out.println("9. Apply for a loan");
         System.out.println("10. Repay due loan");
         System.out.println("11. Fast-forward time (days)");
-        System.out.println("12. Exit program");
+        System.out.println("12. Check daily withdraw amount");
+        System.out.println("13. Exit program");
     }
 
     BankAccount authenticateCustomerLogin(String username, String password) {
@@ -135,9 +136,9 @@ class CustomerMenu {
 
     private void runAccountDetailLoop(BankAccount account) {
         int action = -1;
-        while (action != 12) {
+        while (action != 13) {
             displayAccountDetailMenu(account);
-            action = prompts.getUserSelection(12);
+            action = prompts.getUserSelection(13);
             if (!handleAccountDetailAction(action, account)) {
                 return;
             }
@@ -157,6 +158,7 @@ class CustomerMenu {
             case 9: return runLoanAction(account);
             case 10: return runRepayLoanAction(account);
             case 11: return runFastForwardAction();
+            case 12: return runCheckDailyWithdrawAmountAction(account);
             default: return true;
         }
     }
@@ -212,6 +214,11 @@ class CustomerMenu {
 
     private boolean runFastForwardAction() {
         fastForwardTimeFlow();
+        return true;
+    }
+
+    private boolean runCheckDailyWithdrawAmountAction(BankAccount account) {
+        performCheckDailyWithdrawAmount(account);
         return true;
     }
 
@@ -416,8 +423,14 @@ class CustomerMenu {
 
     private void tryExecuteWithdrawal(BankAccount account, double amount) {
         try {
+            if (!account.canWithdrawWithinDailyLimit(amount, systemTime.getCurrentDay())) {
+                System.out.println("Daily withdrawal limit exceeded. You can only withdraw up to $" + account.getDailyWithdrawLimit() + " today.");
+                return;
+            }
             account.withdraw(amount);
+            account.recordDailyWithdrawAmount(amount, systemTime.getCurrentDay());
             account.recordTransaction("Withdraw", -amount);
+            accountStorage.writeAccounts(accounts);
             System.out.println("Withdrawal successful.");
         } catch (IllegalStateException e) {
             System.out.println(e.getMessage());
@@ -603,10 +616,16 @@ class CustomerMenu {
 
     private void completeImmediateTransfer(BankAccount account, BankAccount target, double amount) {
         try {
+            if (!account.canWithdrawWithinDailyLimit(amount, systemTime.getCurrentDay())) {
+                System.out.println("Daily withdrawal/transfer out limit exceeded. You can only withdraw/transfer out up to $" + account.getDailyWithdrawLimit() + " today.");
+                return;
+            }
             account.withdraw(amount);
+            account.recordDailyWithdrawAmount(amount, systemTime.getCurrentDay());
             account.recordTransaction("Transfer Out", -amount);
             target.deposit(amount);
             target.recordTransaction("Transfer In", amount);
+            accountStorage.writeAccounts(accounts);
             System.out.println("--- Here's your updated account balance: ---");
             System.out.println(account.getAccountName() + ": " + account.getBalance());
             System.out.println(target.getAccountName() + ": " + target.getBalance());
@@ -615,6 +634,15 @@ class CustomerMenu {
         } catch (IllegalStateException e) {
             System.out.println(e.getMessage());
         }
+    }
+
+    private void performCheckDailyWithdrawAmount(BankAccount account) {
+        double currentDailyWithdrawAmount = account.getDailyWithdrawAmount();
+        double dailyWithdrawLimit = account.getDailyWithdrawLimit();
+
+        System.out.println("Today's withdrew amount: " + currentDailyWithdrawAmount);
+        System.out.println("Daily withdraw limit: " + dailyWithdrawLimit);
+        System.out.println("Remaining withdraw amount today: " + (dailyWithdrawLimit - currentDailyWithdrawAmount));
     }
 
     private void printAccountListNumbered(List<BankAccount> list) {
